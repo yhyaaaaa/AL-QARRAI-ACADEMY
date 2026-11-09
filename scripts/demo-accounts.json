@@ -1,0 +1,14 @@
+{
+  "note": "Demo-only accounts for the LOCAL Supabase stack (see scripts/create-demo-accounts.mjs). Never use on a hosted project.",
+  "student": {
+    "name": "Mohamed Sehly",
+    "email": "mohamed.sehly.5983@qarrai.test",
+    "password": "Demo-d71ef1e9A1",
+    "ageBand": "13_15"
+  },
+  "parent": {
+    "name": "Yahya Ben Mohamed",
+    "email": "yahya.benmohamed.5983@qarrai.test",
+    "password": "Demo-aad5e377A1"
+  }
+}

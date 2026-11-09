@@ -74,6 +74,16 @@ Open http://localhost:5173.
 | `npm run test:e2e`                                  | Browser E2E with real sign-up, email confirmation, onboarding, learning space and modules, RTL, focus mode, parent linking (`E2E_AI=1` adds a live chat turn and a live quiz)                                    |
 | `npm run db:reset`                                  | Re-apply migrations to the local DB (wipes local data)                                                                                                                                                           |
 
+## Demo accounts
+
+`scripts/demo-accounts.json` lists a linked demo pair: student **Mohamed Sehly** and parent **Yahya Ben Mohamed**. Create them on your **local** stack, then sign in at http://localhost:5173/login:
+
+```bash
+eval "$(npx supabase status -o env | grep -E '^(ANON_KEY|SERVICE_ROLE_KEY)=')" && ANON_KEY=$ANON_KEY SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY node scripts/create-demo-accounts.mjs
+```
+
+The script refuses any non-local URL. These passwords are public and demo-only: never create these accounts on a hosted project.
+
 ## Deploy
 
 **Backend (Supabase Cloud):**
