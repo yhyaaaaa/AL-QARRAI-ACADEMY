@@ -39,8 +39,7 @@ export function PublicLayout() {
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-8 text-sm sm:flex-row sm:items-center sm:px-6">
           <Logo light />
           <p className="sm:ms-auto">
-            An AI-powered academy of specialised mentors. AI answers are validated before delivery,
-            but can still be wrong; always think critically.
+            {t("foot.note")}
           </p>
         </div>
       </footer>

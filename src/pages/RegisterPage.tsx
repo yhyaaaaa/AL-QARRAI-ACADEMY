@@ -14,16 +14,13 @@ import {
 } from "@/utils/validation";
 import type { AccountType, AgeBand } from "@/types";
 import { cn } from "@/lib/utils";
+import { translateMessage, useT, type StringKey } from "@/i18n/strings";
 
-const AGE_BANDS: { value: AgeBand; label: string }[] = [
-  { value: "under_13", label: "Under 13" },
-  { value: "13_15", label: "13 – 15" },
-  { value: "16_17", label: "16 – 17" },
-  { value: "18_plus", label: "18 or older" },
-];
+const AGE_BANDS: AgeBand[] = ["under_13", "13_15", "16_17", "18_plus"];
 
 export function RegisterPage() {
   const signUp = useAuth((s) => s.signUp);
+  const t = useT();
   const uiLanguage = usePrefs((s) => s.uiLanguage);
   const navigate = useNavigate();
 
@@ -75,7 +72,7 @@ export function RegisterPage() {
       if (needsConfirmation) setConfirmSent(true);
       else navigate(homeFor(accountType), { replace: true });
     } catch (err) {
-      setServerError(err instanceof Error ? err.message : "Registration failed.");
+      setServerError(err instanceof Error ? translateMessage(err.message, uiLanguage) : t("auth.registerFailed"));
     } finally {
       setBusy(false);
     }
@@ -84,19 +81,19 @@ export function RegisterPage() {
   const err = (k: RegistrationField) =>
     errors[k] ? (
       <p id={`${k}-error`} className="mt-1 text-xs text-terracotta-deep">
-        {errors[k]}
+        {t(errors[k])}
       </p>
     ) : null;
 
   const field = (
     k: "name" | "email" | "password" | "confirm" | "guardianEmail",
-    label: string,
+    label: StringKey,
     type: string,
     autoComplete: string,
-    hint?: string,
+    hint?: StringKey,
   ) => (
     <div>
-      <Label htmlFor={k}>{label}</Label>
+      <Label htmlFor={k}>{t(label)}</Label>
       <Input
         id={k}
         type={type}
@@ -107,44 +104,35 @@ export function RegisterPage() {
         aria-describedby={errors[k] ? `${k}-error` : undefined}
         data-testid={`field-${k}`}
       />
-      {hint && !errors[k] && <p className="mt-1 text-xs text-slate-deep">{hint}</p>}
+      {hint && !errors[k] && <p className="mt-1 text-xs text-slate-deep">{t(hint)}</p>}
       {err(k)}
     </div>
   );
 
   if (confirmSent) {
     return (
-      <AuthShell title="Check your inbox" subtitle="One last step.">
+      <AuthShell title={t("auth.inboxTitle")} subtitle={t("auth.inboxSub")}>
         <Alert tone="teal">
           <MailCheck className="mt-0.5 size-4 shrink-0 text-teal-deep" />
           <span data-testid="confirm-sent">
-            We sent a confirmation link to <strong>{form.email}</strong>. Open it to activate the
-            account, then sign in.
-            {isStudent && form.guardianEmail && (
-              <>
-                {" "}
-                Once you sign in, we'll invite your parent at <strong>
-                  {form.guardianEmail}
-                </strong>{" "}
-                to follow your progress.
-              </>
-            )}
+            {t("auth.confirmSent", { email: form.email })}
+            {isStudent && form.guardianEmail && <> {t("auth.willInvite", { email: form.guardianEmail })}</>}
           </span>
         </Alert>
         <Button asChild variant="outline" className="mt-6 w-full">
-          <Link to="/login">Go to sign in</Link>
+          <Link to="/login">{t("auth.goSignIn")}</Link>
         </Button>
       </AuthShell>
     );
   }
 
   return (
-    <AuthShell title="Join the academy" subtitle="Create a student or a parent account.">
-      <div className="mb-5 grid grid-cols-2 gap-2" role="radiogroup" aria-label="Account type">
+    <AuthShell title={t("auth.registerTitle")} subtitle={t("auth.registerSub")}>
+      <div className="mb-5 grid grid-cols-2 gap-2" role="radiogroup" aria-label={t("auth.accountType")}>
         {(
           [
-            { value: "student", label: "I'm a student", icon: GraduationCap },
-            { value: "parent", label: "I'm a parent", icon: Users },
+            { value: "student", label: t("auth.iStudent"), icon: GraduationCap },
+            { value: "parent", label: t("auth.iParent"), icon: Users },
           ] as const
         ).map(({ value, label, icon: Icon }) => (
           <button
@@ -172,40 +160,40 @@ export function RegisterPage() {
       <form onSubmit={onSubmit} noValidate className="space-y-4">
         {field(
           "name",
-          isStudent ? "Nickname" : "Your name",
+          isStudent ? "auth.nickname" : "auth.yourName",
           "text",
           "nickname",
-          isStudent ? "Use a nickname, not your full real name." : undefined,
+          isStudent ? "auth.nicknameHint" : undefined,
         )}
-        {field("email", "Email", "email", "email")}
+        {field("email", "auth.email", "email", "email")}
         {field(
           "password",
-          "Password",
+          "auth.password",
           "password",
           "new-password",
-          "At least 10 characters with upper-case, lower-case and a number.",
+          "val.pwHint",
         )}
-        {field("confirm", "Confirm password", "password", "new-password")}
+        {field("confirm", "auth.confirmPassword", "password", "new-password")}
 
         {isStudent && (
           <>
             <fieldset>
-              <legend className="mb-1.5 text-sm font-medium">Age group</legend>
+              <legend className="mb-1.5 text-sm font-medium">{t("auth.ageGroup")}</legend>
               <div className="grid grid-cols-2 gap-2" role="radiogroup">
                 {AGE_BANDS.map((b) => (
                   <label
-                    key={b.value}
+                    key={b}
                     className="flex cursor-pointer items-center gap-2 rounded-xl border border-ink/15 bg-paper px-3 py-2 text-sm has-[:checked]:border-teal-deep has-[:checked]:bg-teal/10"
                   >
                     <input
                       type="radio"
                       name="age"
-                      value={b.value}
-                      checked={ageBand === b.value}
-                      onChange={() => setAgeBand(b.value)}
+                      value={b}
+                      checked={ageBand === b}
+                      onChange={() => setAgeBand(b)}
                       className="accent-[var(--color-teal-deep)]"
                     />
-                    {b.label}
+                    {t(`age.${b}`)}
                   </label>
                 ))}
               </div>
@@ -216,13 +204,11 @@ export function RegisterPage() {
               className="rounded-xl border border-gold/50 bg-gold/10 p-3"
               data-testid="parent-section"
             >
-              <legend className="px-1 text-sm font-semibold">Parent or guardian</legend>
+              <legend className="px-1 text-sm font-semibold">{t("auth.guardianLegend")}</legend>
               <p className="mb-3 text-xs text-ink/75">
-                {minor
-                  ? "Required for students under 18. Your parent receives an invitation to a parent dashboard where they can follow your progress (not your chats)."
-                  : "Optional. Add a parent's email if you want them to follow your progress."}
+                {minor ? t("auth.guardianRequiredNote") : t("auth.guardianOptionalNote")}
               </p>
-              {field("guardianEmail", "Parent's email", "email", "off")}
+              {field("guardianEmail", "auth.guardianEmail", "email", "off")}
               {minor && (
                 <label className="mt-3 flex cursor-pointer items-start gap-2 text-sm">
                   <input
@@ -232,7 +218,7 @@ export function RegisterPage() {
                     className="mt-1 accent-[var(--color-teal-deep)]"
                     data-testid="guardian-consent"
                   />
-                  <span>My parent or guardian agrees to me using Qarrai Academy's AI mentors.</span>
+                  <span>{t("auth.consent")}</span>
                 </label>
               )}
               {err("consent")}
@@ -242,18 +228,13 @@ export function RegisterPage() {
 
         {!isStudent && (
           <p className="rounded-xl bg-teal/10 p-3 text-xs text-ink/80">
-            Use the same email your child entered as their parent's email. Once you confirm it, your
-            child's progress appears on your dashboard automatically.{" "}
-            <strong>Already received an invitation email from Qarrai?</strong> Open its link instead
-            to choose your password.
+            {t("auth.parentNote")} <strong>{t("auth.parentInvited")}</strong>
           </p>
         )}
 
         <p className="flex gap-2 text-xs text-slate-deep">
           <ShieldCheck className="size-4 shrink-0 text-teal-deep" aria-hidden="true" />
-          We store only a nickname, an age group and learning activity. Emails and phone numbers
-          typed in chats are removed automatically. You can export or delete everything at any time
-          from the account page.
+          {t("auth.privacyNote")}
         </p>
 
         {serverError && (
@@ -262,14 +243,14 @@ export function RegisterPage() {
           </p>
         )}
         <Button type="submit" className="w-full" disabled={busy} data-testid="register-submit">
-          {busy && <Loader2 className="animate-spin" />} Create {isStudent ? "student" : "parent"}{" "}
-          account
+          {busy && <Loader2 className="animate-spin" />}{" "}
+          {isStudent ? t("auth.createStudent") : t("auth.createParent")}
         </Button>
       </form>
       <p className="mt-6 text-center text-sm text-slate-deep">
-        Already registered?{" "}
+        {t("auth.already")}{" "}
         <Link to="/login" className="font-medium text-teal-deep hover:underline">
-          Sign in
+          {t("auth.signInBtn")}
         </Link>
       </p>
     </AuthShell>

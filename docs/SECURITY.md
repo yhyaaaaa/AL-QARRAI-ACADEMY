@@ -27,8 +27,10 @@ Qarrai Academy is used by **minors**. This document lists every protection that 
 - Students **read** only their own rows. They **write** only: nickname, language, session title, session delete, document delete.
 - AI messages, exercises, grades, documents, progress, usage and security events are written **only by Edge Functions** (service role). Students cannot fabricate an "AI-validated" message or mark their own exercise correct.
 - Exercise answers are hidden until the exercise is completed: the `exercises` table is not readable by clients; the `my_exercises` view masks `answer`/`explanation`.
+- Learning activities (quiz, game, flashcards, teach-back, diagnostic…): answer keys and rubrics are stored in `learning_items.solution`, a column with **no client grant**. Answers are checked by the Edge Function (`check`), at most two tries per part, and attempts and points are written only by the server. Students can write only their own flashcard reviews, and only for their own flashcard items.
+- Learner preferences (level, styles, goals, accessibility) are chosen by the student and validated server-side. The platform never asks about or stores medical conditions.
 - Storage: private `materials` bucket, 10 MB, MIME allow-list; objects must live under `<auth.uid()>/`.
-- Tested: 17 PGlite tests run the real migrations; 20 integration tests run against the real local Supabase stack.
+- Tested: 22 PGlite tests run the real migrations; 31 integration tests run against the real local Supabase stack.
 
 ## 4. AI protections
 

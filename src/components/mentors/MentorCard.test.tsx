@@ -22,7 +22,7 @@ describe("mentors", () => {
     expect(screen.getByRole("heading", { name: mentor.name })).toBeInTheDocument();
     expect(screen.getByText(mentor.domain)).toBeInTheDocument();
     expect(screen.getByText(mentor.personality[0])).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: new RegExp(mentor.firstName) })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: new RegExp(mentor.name) })).toHaveAttribute(
       "href",
       `/learn/${mentor.id}`,
     );

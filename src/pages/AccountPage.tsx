@@ -7,16 +7,12 @@ import { useAuth } from "@/store/authStore";
 import { data } from "@/services/data";
 import { api } from "@/services/api";
 import { GuardiansCard } from "@/components/account/GuardiansCard";
-
-const AGE_LABEL = {
-  under_13: "Under 13",
-  "13_15": "13 – 15",
-  "16_17": "16 – 17",
-  "18_plus": "18 or older",
-} as const;
+import { useT } from "@/i18n/strings";
+import { UI_LANGUAGES } from "@/i18n/languages";
 
 export function AccountPage() {
   const { user, profile, refreshProfile, signOut } = useAuth();
+  const t = useT();
   const navigate = useNavigate();
   const [name, setName] = useState(profile?.display_name ?? "");
   const [language, setLanguage] = useState(profile?.preferred_language ?? "auto");
@@ -29,21 +25,15 @@ export function AccountPage() {
     if (!user) return;
     const nick = name.trim();
     if (nick.length < 2 || nick.length > 40 || /@|\d{6,}/.test(nick)) {
-      return setStatus({
-        tone: "terracotta",
-        text: "Choose a nickname of 2–40 characters without an email or phone number.",
-      });
+      return setStatus({ tone: "terracotta", text: t("acc.nickInvalid") });
     }
     setBusy("save");
     try {
       await data.updateProfile(user.id, { display_name: nick, preferred_language: language });
       await refreshProfile();
-      setStatus({ tone: "teal", text: "Saved." });
+      setStatus({ tone: "teal", text: t("common.saved") });
     } catch (err) {
-      setStatus({
-        tone: "terracotta",
-        text: err instanceof Error ? err.message : "Could not save.",
-      });
+      setStatus({ tone: "terracotta", text: err instanceof Error ? err.message : t("acc.saveFailed") });
     } finally {
       setBusy(null);
     }
@@ -60,10 +50,7 @@ export function AccountPage() {
       a.click();
       URL.revokeObjectURL(a.href);
     } catch (err) {
-      setStatus({
-        tone: "terracotta",
-        text: err instanceof Error ? err.message : "Export failed.",
-      });
+      setStatus({ tone: "terracotta", text: err instanceof Error ? err.message : t("acc.exportFailed") });
     } finally {
       setBusy(null);
     }
@@ -76,24 +63,21 @@ export function AccountPage() {
       await signOut();
       navigate("/", { replace: true });
     } catch (err) {
-      setStatus({
-        tone: "terracotta",
-        text: err instanceof Error ? err.message : "Deletion failed.",
-      });
+      setStatus({ tone: "terracotta", text: err instanceof Error ? err.message : t("acc.deleteFailed") });
       setBusy(null);
     }
   }
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6">
-      <h1 className="font-display text-4xl">Your account</h1>
+      <h1 className="font-display text-4xl">{t("acc.title")}</h1>
       <p className="mt-1 text-sm text-slate-deep">
         {user?.email} ·{" "}
         {profile?.account_type === "parent"
-          ? "Parent account"
-          : `Age group: ${profile?.age_band ? AGE_LABEL[profile.age_band] : "…"}`}
+          ? t("acc.parentAccount")
+          : t("acc.ageGroup", { age: profile?.age_band ? t(`age.${profile.age_band}`) : "…" })}
         {profile?.guardian_consent_at &&
-          ` · Guardian consent recorded ${new Date(profile.guardian_consent_at).toLocaleDateString()}`}
+          ` · ${t("acc.consentAt", { date: new Date(profile.guardian_consent_at).toLocaleDateString(document.documentElement.lang) })}`}
       </p>
 
       {status && (
@@ -103,33 +87,30 @@ export function AccountPage() {
       )}
 
       <Card className="mt-6 p-6">
-        <h2 className="font-display text-2xl">Profile</h2>
+        <h2 className="font-display text-2xl">{t("acc.profile")}</h2>
         <form onSubmit={save} className="mt-4 space-y-4">
           <div>
-            <Label htmlFor="nick">Nickname</Label>
-            <Input
-              id="nick"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              maxLength={40}
-            />
+            <Label htmlFor="nick">{t("auth.nickname")}</Label>
+            <Input id="nick" value={name} onChange={(e) => setName(e.target.value)} maxLength={40} />
           </div>
           <div>
-            <Label htmlFor="lang">Mentors reply in</Label>
+            <Label htmlFor="lang">{t("acc.replyIn")}</Label>
             <select
               id="lang"
               value={language}
               onChange={(e) => setLanguage(e.target.value as typeof language)}
               className="h-11 w-full rounded-xl border border-ink/15 bg-paper px-3 text-sm"
             >
-              <option value="auto">The language I write in</option>
-              <option value="en">English</option>
-              <option value="fr">Français</option>
-              <option value="ar">العربية</option>
+              <option value="auto">{t("acc.replyAuto")}</option>
+              {UI_LANGUAGES.map((l) => (
+                <option key={l.value} value={l.value}>
+                  {l.label}
+                </option>
+              ))}
             </select>
           </div>
           <Button type="submit" disabled={busy !== null}>
-            {busy === "save" && <Loader2 className="animate-spin" />} Save
+            {busy === "save" && <Loader2 className="animate-spin" />} {t("common.save")}
           </Button>
         </form>
       </Card>
@@ -138,18 +119,11 @@ export function AccountPage() {
 
       <Card className="mt-6 p-6">
         <h2 className="flex items-center gap-2 font-display text-2xl">
-          <ShieldCheck className="size-5 text-teal-deep" aria-hidden="true" /> Privacy &amp;
-          security
+          <ShieldCheck className="size-5 text-teal-deep" aria-hidden="true" /> {t("acc.privacy")}
         </h2>
         <div className="mt-4 flex flex-wrap gap-3">
-          <Button
-            variant="outline"
-            onClick={exportData}
-            disabled={busy !== null}
-            data-testid="export-data"
-          >
-            {busy === "export" ? <Loader2 className="animate-spin" /> : <Download />} Download my
-            data
+          <Button variant="outline" onClick={exportData} disabled={busy !== null} data-testid="export-data">
+            {busy === "export" ? <Loader2 className="animate-spin" /> : <Download />} {t("acc.download")}
           </Button>
           <Button
             variant="outline"
@@ -159,25 +133,23 @@ export function AccountPage() {
             }}
             disabled={busy !== null}
           >
-            <LogOut /> Sign out on all devices
+            <LogOut /> {t("acc.signOutAll")}
           </Button>
         </div>
       </Card>
 
       <Card className="mt-6 border-terracotta/40 p-6">
         <h2 className="flex items-center gap-2 font-display text-2xl text-terracotta-deep">
-          <Trash2 className="size-5" aria-hidden="true" /> Delete account
+          <Trash2 className="size-5" aria-hidden="true" /> {t("acc.delete")}
         </h2>
-        <p className="mt-2 text-sm text-ink/80">
-          This permanently deletes the account, every conversation, exercise, progress record and
-          uploaded document. It cannot be undone. Type <strong>DELETE</strong> to confirm.
-        </p>
+        <p className="mt-2 text-sm text-ink/80">{t("acc.deleteWarn")}</p>
         <div className="mt-3 flex gap-2">
           <Input
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
-            aria-label="Type DELETE to confirm"
+            aria-label={t("acc.deleteLabel")}
             className="max-w-40"
+            dir="ltr"
           />
           <Button
             variant="outline"
@@ -186,7 +158,7 @@ export function AccountPage() {
             onClick={deleteAccount}
             data-testid="delete-account"
           >
-            {busy === "delete" && <Loader2 className="animate-spin" />} Delete everything
+            {busy === "delete" && <Loader2 className="animate-spin" />} {t("acc.deleteAll")}
           </Button>
         </div>
       </Card>

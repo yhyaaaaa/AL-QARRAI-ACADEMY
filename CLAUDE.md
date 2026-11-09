@@ -23,6 +23,8 @@ React 19, TypeScript strict, Vite 8, Tailwind 4, Zustand, React Router 7, react-
 
 `npx supabase start` · `npm run dev` · `npm run check` · `npm run test:integration` · `npm run test:e2e` · `npm run db:reset`
 
+- **Learning activities** (`generate`/`check` in `mentor-response/learn.ts`): answer keys live in `learning_items.solution`, which has no client grant. Add deterministic checks to `activityIssues()` before relying on the validator model.
+
 ## Conventions
 
-Logical CSS properties for RTL; `dir="auto"` on user/AI text; `*-deep` colour tokens for text. Git: feature branches, no direct commits to `main`, no pushes without the lead's approval.
+Logical CSS properties for RTL (Tailwind 4 `space-x-*` is already logical: never add `rtl:space-x-reverse`); `dir="auto"` on user/AI text; `*-deep` colour tokens for text. No hard-coded UI text: every string goes in `src/i18n/strings.ts` for **en, fr, ar** (tn inherits ar and overrides only what differs); mentor display text goes through `useLocalizedMentor`. Validators return string keys, not sentences. Accessibility settings are learner preferences, never medical information. Git: feature branches, no direct commits to `main`, no pushes without the lead's approval.

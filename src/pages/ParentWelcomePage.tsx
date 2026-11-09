@@ -7,11 +7,13 @@ import { requireSupabase } from "@/services/supabase/client";
 import { useAuth } from "@/store/authStore";
 import { data } from "@/services/data";
 import { validatePassword } from "@/utils/validation";
+import { useT } from "@/i18n/strings";
 
 /** Landing page of the guardian invitation email: the parent chooses a nickname and a password. */
 export function ParentWelcomePage() {
   const { user, profile, refreshProfile } = useAuth();
   const navigate = useNavigate();
+  const t = useT();
   const [name, setName] = useState(
     profile?.display_name === "Parent" ? "" : (profile?.display_name ?? ""),
   );
@@ -24,10 +26,10 @@ export function ParentWelcomePage() {
     e.preventDefault();
     const nick = name.trim();
     if (nick.length < 2 || nick.length > 40)
-      return setError("Choose a display name between 2 and 40 characters.");
+      return setError(t("pw.nameInvalid"));
     const pw = validatePassword(password);
-    if (pw) return setError(pw);
-    if (password !== confirm) return setError("Passwords do not match.");
+    if (pw) return setError(t(pw));
+    if (password !== confirm) return setError(t("val.pwMismatch"));
     setBusy(true);
     setError(null);
     try {
@@ -37,7 +39,7 @@ export function ParentWelcomePage() {
       await refreshProfile();
       navigate("/parent", { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not save.");
+      setError(err instanceof Error ? err.message : t("acc.saveFailed"));
     } finally {
       setBusy(false);
     }
@@ -46,14 +48,13 @@ export function ParentWelcomePage() {
   return (
     <div className="mx-auto w-full max-w-md px-4 py-10">
       <Card className="p-8">
-        <h1 className="font-display text-3xl">Welcome to Qarrai Academy</h1>
+        <h1 className="font-display text-3xl">{t("pw.title")}</h1>
         <p className="mt-2 text-sm text-slate-deep">
-          Your child added <strong>{user?.email}</strong> as their parent's email. Choose a password
-          to follow their progress.
+          {t("pw.intro", { email: user?.email ?? "" })}
         </p>
         <form onSubmit={onSubmit} className="mt-6 space-y-4" noValidate>
           <div>
-            <Label htmlFor="pname">Your display name</Label>
+            <Label htmlFor="pname">{t("pw.name")}</Label>
             <Input
               id="pname"
               value={name}
@@ -62,7 +63,7 @@ export function ParentWelcomePage() {
             />
           </div>
           <div>
-            <Label htmlFor="ppw">Password</Label>
+            <Label htmlFor="ppw">{t("auth.password")}</Label>
             <Input
               id="ppw"
               type="password"
@@ -71,11 +72,11 @@ export function ParentWelcomePage() {
               onChange={(e) => setPassword(e.target.value)}
             />
             <p className="mt-1 text-xs text-slate-deep">
-              At least 10 characters with upper-case, lower-case and a number.
+              {t("val.pwHint")}
             </p>
           </div>
           <div>
-            <Label htmlFor="ppw2">Confirm password</Label>
+            <Label htmlFor="ppw2">{t("auth.confirmPassword")}</Label>
             <Input
               id="ppw2"
               type="password"
@@ -90,7 +91,7 @@ export function ParentWelcomePage() {
             </p>
           )}
           <Button type="submit" className="w-full" disabled={busy}>
-            {busy && <Loader2 className="animate-spin" />} Save and open the parent dashboard
+            {busy && <Loader2 className="animate-spin" />} {t("pw.save")}
           </Button>
         </form>
       </Card>

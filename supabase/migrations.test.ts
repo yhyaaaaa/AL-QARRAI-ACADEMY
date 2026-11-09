@@ -138,7 +138,7 @@ describe("row level security and privileges", () => {
   beforeAll(async () => {
     aliceSession = await as("service_role", null, async () => {
       const s = await db.query<{ id: string }>(
-        "insert into public.sessions (user_id, mentor_id, title) values ($1, 'shamia', 'Fractions') returning id",
+        "insert into public.sessions (user_id, mentor_id, title) values ($1, 'ba9lewa', 'Fractions') returning id",
         [ALICE],
       );
       await db.query(
@@ -174,7 +174,7 @@ describe("row level security and privileges", () => {
         ),
       ).rejects.toThrow(/permission denied/);
       await expect(
-        db.query("insert into public.sessions (user_id, mentor_id) values ($1, 'draa')", [ALICE]),
+        db.query("insert into public.sessions (user_id, mentor_id) values ($1, 'ibnbatbuta')", [ALICE]),
       ).rejects.toThrow(/permission denied/);
       await expect(db.query("update public.messages set content = 'edited'")).rejects.toThrow(
         /permission denied/,
@@ -240,7 +240,7 @@ describe("progress triggers", () => {
     await as("service_role", null, async () => {
       const ex = await db.query<{ id: string }>(
         `insert into public.exercises (user_id, mentor_id, question, answer, answer_type, explanation)
-         values ($1, 'shamia', 'Compute 2+2', '4', 'numeric', '2+2 = 4') returning id`,
+         values ($1, 'ba9lewa', 'Compute 2+2', '4', 'numeric', '2+2 = 4') returning id`,
         [ALICE],
       );
       await db.query(
@@ -266,7 +266,7 @@ describe("exercise answers stay secret until solved", () => {
     await as("service_role", null, () =>
       db.query(
         `insert into public.exercises (user_id, mentor_id, question, answer, answer_type, explanation)
-         values ($1, 'draa', 'How many protons in carbon?', '6', 'numeric', 'Atomic number 6')`,
+         values ($1, 'ibnbatbuta', 'How many protons in carbon?', '6', 'numeric', 'Atomic number 6')`,
         [ALICE],
       ),
     );
@@ -436,6 +436,109 @@ describe("parent accounts and guardian links", () => {
       expect(
         (await db.query<{ o: unknown[] }>("select public.get_children_overview() as o")).rows[0].o,
       ).toEqual([]);
+    });
+  });
+});
+
+describe("learning experiences (items, attempts, flashcards, preferences)", () => {
+  let quizId: string;
+  let cardsId: string;
+
+  beforeAll(async () => {
+    await as("service_role", null, async () => {
+      const q = await db.query<{ id: string }>(
+        `insert into public.learning_items (user_id, mentor_id, kind, topic, content, solution, options)
+         values ($1, 'ba9lewa', 'quiz', 'Fractions',
+           '{"questions":[{"type":"mc","prompt":"1/2+1/4?","options":["3/4","2/6"]},{"type":"tf","prompt":"1/2 > 1/3"}]}',
+           '{"answers":[0,true]}', '{"difficulty":"easy"}') returning id`,
+        [ALICE],
+      );
+      quizId = q.rows[0].id;
+      const c = await db.query<{ id: string }>(
+        `insert into public.learning_items (user_id, mentor_id, kind, topic, content)
+         values ($1, 'falfoul', 'flashcards', 'Verbs', '{"cards":[{"front":"a","back":"b"}]}') returning id`,
+        [ALICE],
+      );
+      cardsId = c.rows[0].id;
+      await db.query(
+        `insert into public.activity_attempts (user_id, item_id, mentor_id, kind, part, answer, is_correct, score, points)
+         values ($1, $2, 'ba9lewa', 'quiz', 0, '0', true, 1, 10), ($1, $2, 'ba9lewa', 'quiz', 1, 'false', false, 0, 0)`,
+        [ALICE, quizId],
+      );
+    });
+  });
+
+  it("never exposes answers (solution) to students", async () => {
+    await as("authenticated", ALICE, async () => {
+      const r = await db.query<{ topic: string }>("select id, topic, content from public.learning_items where id = $1", [quizId]);
+      expect(r.rows[0].topic).toBe("Fractions");
+      await expect(db.query("select solution from public.learning_items")).rejects.toThrow(/permission denied/);
+      await expect(db.query("select * from public.learning_items")).rejects.toThrow(/permission denied/);
+    });
+    await as("authenticated", BOB, async () => {
+      expect((await db.query("select id from public.learning_items")).rows).toHaveLength(0);
+    });
+  });
+
+  it("forbids students from writing items or scored attempts", async () => {
+    await as("authenticated", ALICE, async () => {
+      await expect(
+        db.query(
+          `insert into public.activity_attempts (user_id, item_id, mentor_id, kind, answer, is_correct, points)
+           values ($1, $2, 'ba9lewa', 'quiz', '0', true, 100)`,
+          [ALICE, quizId],
+        ),
+      ).rejects.toThrow(/permission denied/);
+      await expect(
+        db.query(`insert into public.learning_items (user_id, mentor_id, kind, topic, content) values ($1, 'ba9lewa', 'quiz', 'x', '{}')`, [ALICE]),
+      ).rejects.toThrow(/permission denied/);
+    });
+  });
+
+  it("lets students self-assess only their own flashcards", async () => {
+    await as("authenticated", ALICE, async () => {
+      await db.query("insert into public.flashcard_reviews (item_id, card_index, status) values ($1, 0, 'known')", [cardsId]);
+      await expect(
+        db.query("insert into public.flashcard_reviews (item_id, card_index, status) values ($1, 0, 'known')", [quizId]),
+      ).rejects.toThrow(/row-level security/);
+    });
+    await as("authenticated", BOB, async () => {
+      await expect(
+        db.query("insert into public.flashcard_reviews (item_id, card_index, status) values ($1, 1, 'known')", [cardsId]),
+      ).rejects.toThrow(/row-level security/);
+    });
+  });
+
+  it("stores learner preferences and rejects invalid ones", async () => {
+    await as("authenticated", ALICE, async () => {
+      await db.query(
+        `update public.profiles set level = 'beginner', learning_styles = '{visual,step_by_step}',
+         preferred_language = 'tn', accessibility = '{"textSize":"lg","focusMode":true}' where id = $1`,
+        [ALICE],
+      );
+      await expect(db.query("update public.profiles set learning_styles = '{telepathy}' where id = $1", [ALICE])).rejects.toThrow(
+        /check/,
+      );
+    });
+  });
+
+  it("computes learning statistics from real rows only", async () => {
+    await as("authenticated", ALICE, async () => {
+      const r = await db.query<{ s: Record<string, unknown> }>("select public.get_learning_stats() as s");
+      const s = r.rows[0].s as {
+        items_by_kind: Record<string, number>;
+        points: number;
+        quizzes: { total: number; correct: number; answered: number }[];
+        flashcards: { known: number };
+      };
+      expect(s.items_by_kind).toMatchObject({ quiz: 1, flashcards: 1 });
+      expect(s.points).toBe(10);
+      expect(s.quizzes[0]).toMatchObject({ total: 2, answered: 2, correct: 1 });
+      expect(s.flashcards.known).toBe(1);
+    });
+    await as("authenticated", BOB, async () => {
+      const r = await db.query<{ s: { points: number } }>("select public.get_learning_stats() as s");
+      expect(r.rows[0].s.points).toBe(0);
     });
   });
 });

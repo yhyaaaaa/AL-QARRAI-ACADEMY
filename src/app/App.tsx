@@ -2,7 +2,9 @@ import { useEffect } from "react";
 import { RouterProvider } from "react-router-dom";
 import { router } from "./router";
 import { useAuth } from "@/store/authStore";
-import { applyDocumentLanguage, usePrefs } from "@/store/prefsStore";
+import { MotionConfig } from "motion/react";
+import { usePrefs } from "@/store/prefsStore";
+import { PrefsEffects } from "./PrefsEffects";
 import { LogoMark } from "@/components/navigation/Logo";
 import { env } from "@/lib/env";
 
@@ -30,15 +32,11 @@ function SetupRequired() {
 export function App() {
   const initialized = useAuth((s) => s.initialized);
   const init = useAuth((s) => s.init);
-  const uiLanguage = usePrefs((s) => s.uiLanguage);
+  const reducedMotion = usePrefs((s) => s.a11y.reducedMotion);
 
   useEffect(() => {
     void init();
   }, [init]);
-
-  useEffect(() => {
-    applyDocumentLanguage(uiLanguage);
-  }, [uiLanguage]);
 
   if (!env.supabaseConfigured) return <SetupRequired />;
   if (!initialized) {
@@ -48,5 +46,10 @@ export function App() {
       </div>
     );
   }
-  return <RouterProvider router={router} />;
+  return (
+    <MotionConfig reducedMotion={reducedMotion ? "always" : "user"}>
+      <PrefsEffects />
+      <RouterProvider router={router} />
+    </MotionConfig>
+  );
 }

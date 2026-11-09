@@ -55,7 +55,7 @@ describe("detectWellbeingConcern", () => {
 
 describe("system prompt hardening", () => {
   it("puts safety rules first, adapts to age, and fences untrusted material", () => {
-    const p = buildSystemPrompt(getMentorPrompt("draa"), {
+    const p = buildSystemPrompt(getMentorPrompt("ibnbatbuta"), {
       language: "en",
       intent: "chat",
       ageBand: "under_13",

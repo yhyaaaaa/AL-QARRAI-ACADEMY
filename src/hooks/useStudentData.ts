@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 import { data } from "@/services/data";
+import { learn } from "@/services/learn";
+import type { LearningStats } from "@/types/learning";
 import type { ExerciseView, ProgressRow, SessionSummary } from "@/types";
 
 export interface StudentData {
   sessions: SessionSummary[];
   exercises: ExerciseView[];
   progress: ProgressRow[];
+  stats: LearningStats | null;
   loading: boolean;
   error: string | null;
 }
@@ -16,15 +19,16 @@ export function useStudentData(): StudentData {
     sessions: [],
     exercises: [],
     progress: [],
+    stats: null,
     loading: true,
     error: null,
   });
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([data.sessions(), data.exercises(), data.progress()])
-      .then(([sessions, exercises, progress]) => {
-        if (!cancelled) setState({ sessions, exercises, progress, loading: false, error: null });
+    Promise.all([data.sessions(), data.exercises(), data.progress(), learn.stats()])
+      .then(([sessions, exercises, progress, stats]) => {
+        if (!cancelled) setState({ sessions, exercises, progress, stats, loading: false, error: null });
       })
       .catch((e: unknown) => {
         if (!cancelled)

@@ -1,23 +1,29 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, Navigate, useParams, useSearchParams } from "react-router-dom";
-import { AlertTriangle, RotateCcw, ShieldCheck } from "lucide-react";
-import { MENTORS, getMentor, mentorStyle, type MentorProfile } from "@/data/mentors";
-import { MentorSidebar } from "@/components/mentors/MentorSidebar";
-import { MessageBubble, TypingIndicator } from "@/components/chat/MessageBubble";
-import { Composer } from "@/components/chat/Composer";
-import { MentorAvatar, MentorPortrait } from "@/components/mentors/MentorPortrait";
-import { Button } from "@/components/ui/button";
-import { Alert } from "@/components/ui/primitives";
-import { useAuth } from "@/store/authStore";
-import { usePrefs } from "@/store/prefsStore";
-import { api, ApiError } from "@/services/api";
+import { useEffect, useState } from "react";
+import { useMentorLocalizer } from "@/data/mentorText";
+import { Link, Navigate, useParams } from "react-router-dom";
+import { getMentor, MENTORS, mentorStyle, type MentorProfile } from "@/data/mentors";
+import { MentorAvatar, MentorCharacter } from "@/components/mentors/MentorPortrait";
+import { Badge, Card } from "@/components/ui/primitives";
+import { useT, type StringKey } from "@/i18n/strings";
 import { data } from "@/services/data";
-import { uploadDocument } from "@/services/documents";
-import type { DocumentRow, ExerciseView, Language, MessageRow, SessionSummary } from "@/types";
-import { cn } from "@/lib/utils";
+import { learn } from "@/services/learn";
+import {
+  EXPERIENCES,
+  GROUP_LABEL,
+  getExperience,
+  KIND_TO_EXPERIENCE,
+  type ExperienceGroup,
+} from "@/features/learning/experiences";
+import { TopicField } from "@/features/learning/TopicField";
+import { ChatModule } from "@/features/learning/modules/ChatModule";
+import { QuizModule } from "@/features/learning/modules/QuizModule";
+import { FlashcardsModule, KeyTermsModule, SummaryModule } from "@/features/learning/modules/ContentModules";
+import { MindMapModule } from "@/features/learning/modules/MindMapModule";
+import { TeachBackModule } from "@/features/learning/modules/TeachBackModule";
+import { GameModule } from "@/features/learning/modules/GameModule";
+import { formatRelative } from "@/utils/format";
 
-const EXERCISE_REQUEST = "Can you give me a practice exercise?";
-
+/** /learn/:mentorId — the mentor's study. */
 export function LearningPage() {
   const { mentorId } = useParams();
   const mentor = getMentor(mentorId);
@@ -25,291 +31,209 @@ export function LearningPage() {
   return <LearningSpace key={mentor.id} mentor={mentor} />;
 }
 
-function describeError(e: unknown): string {
-  if (e instanceof ApiError) {
-    if (e.retryAfterSeconds && e.code === "RATE_LIMITED") {
-      const wait =
-        e.retryAfterSeconds >= 120
-          ? `${Math.round(e.retryAfterSeconds / 60)} minutes`
-          : `${e.retryAfterSeconds} seconds`;
-      return `${e.message} (try again in about ${wait})`;
-    }
-    return e.message;
+/** /learn/:mentorId/:experienceId — one of the nine modules. */
+export function ModulePage() {
+  const { mentorId, experienceId } = useParams();
+  const mentor = getMentor(mentorId);
+  const experience = getExperience(experienceId);
+  if (!mentor) return <Navigate to="/mentors" replace />;
+  if (!experience) return <Navigate to={`/learn/${mentor.id}`} replace />;
+  const key = `${mentor.id}-${experience.id}`;
+  switch (experience.id) {
+    case "chat":
+    case "askwhy":
+      return <ChatModule key={key} mentor={mentor} experience={experience} />;
+    case "quiz":
+      return <QuizModule key={key} mentor={mentor} experience={experience} />;
+    case "summary":
+      return <SummaryModule key={key} mentor={mentor} experience={experience} />;
+    case "keyterms":
+      return <KeyTermsModule key={key} mentor={mentor} experience={experience} />;
+    case "flashcards":
+      return <FlashcardsModule key={key} mentor={mentor} experience={experience} />;
+    case "mindmap":
+      return <MindMapModule key={key} mentor={mentor} experience={experience} />;
+    case "teachback":
+      return <TeachBackModule key={key} mentor={mentor} experience={experience} />;
+    case "game":
+      return <GameModule key={key} mentor={mentor} experience={experience} />;
   }
-  return e instanceof Error ? e.message : "Something went wrong.";
 }
 
-function LearningSpace({ mentor }: { mentor: MentorProfile }) {
-  const user = useAuth((s) => s.user)!;
-  const { tutorLanguage, setTutorLanguage } = usePrefs();
-  const [params, setParams] = useSearchParams();
-  const sessionId = params.get("session");
-  const wantsExercise = params.get("exercise") === "1";
+interface RecentEntry {
+  key: string;
+  label: string;
+  kind: StringKey;
+  href: string;
+  at: string;
+}
 
-  const [sessions, setSessions] = useState<SessionSummary[]>([]);
-  const [loaded, setLoaded] = useState<{ sid: string | null; messages: MessageRow[] }>({
-    sid: null,
-    messages: [],
-  });
-  const messages = useMemo(
-    () => (loaded.sid === sessionId ? loaded.messages : []),
-    [loaded, sessionId],
-  );
-  const [exercises, setExercises] = useState<Record<string, ExerciseView>>({});
-  const [pending, setPending] = useState<string | null>(null);
-  const [error, setError] = useState<{ message: string; retry?: () => void } | null>(null);
-  const [document, setDocument] = useState<DocumentRow | null>(null);
-  const [documentBusy, setDocumentBusy] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
-
-  const skipLoad = useRef<string | null>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const autoExerciseDone = useRef(false);
-  const retryExercise = useRef<() => void>(() => undefined);
-
-  const reloadSessions = useCallback(
-    () =>
-      data
-        .sessions()
-        .then((all) => setSessions(all.filter((s) => s.mentor_id === mentor.id)))
-        .catch((e: unknown) => setLoadError(describeError(e))),
-    [mentor.id],
-  );
+function LearningSpace({ mentor: baseMentor }: { mentor: MentorProfile }) {
+  const t = useT();
+  const L = useMentorLocalizer();
+  const mentor = L(baseMentor);
+  const [recent, setRecent] = useState<RecentEntry[] | null>(null);
+  const [topicFocused, setTopicFocused] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    data
-      .sessions()
-      .then((all) => !cancelled && setSessions(all.filter((s) => s.mentor_id === mentor.id)))
-      .catch((e: unknown) => !cancelled && setLoadError(describeError(e)));
+    Promise.all([learn.items({ mentorId: mentor.id, limit: 8 }), data.sessions()])
+      .then(([items, sessions]) => {
+        if (cancelled) return;
+        const entries: RecentEntry[] = [
+          ...items.map((i) => {
+            const exp = getExperience(KIND_TO_EXPERIENCE[i.kind])!;
+            return { key: i.id, label: i.topic, kind: exp.name, href: `/learn/${mentor.id}/${exp.id}?item=${i.id}`, at: i.created_at };
+          }),
+          ...sessions
+            .filter((s) => s.mentor_id === mentor.id)
+            .slice(0, 5)
+            .map((s) => ({
+              key: s.id,
+              label: s.title,
+              kind: "exp.chat.name" as StringKey,
+              href: `/learn/${mentor.id}/chat?session=${s.id}`,
+              at: s.updated_at,
+            })),
+        ]
+          .sort((a, b) => b.at.localeCompare(a.at))
+          .slice(0, 8);
+        setRecent(entries);
+      })
+      .catch(() => !cancelled && setRecent([]));
     return () => {
       cancelled = true;
     };
   }, [mentor.id]);
 
-  // load the selected session's history and exercises from the database
-  useEffect(() => {
-    if (!sessionId || skipLoad.current === sessionId) return;
-    let cancelled = false;
-    Promise.all([data.messages(sessionId), data.exercises(sessionId)])
-      .then(([msgs, exs]) => {
-        if (cancelled) return;
-        setLoaded({ sid: sessionId, messages: msgs });
-        setExercises(
-          Object.fromEntries(exs.filter((x) => x.message_id).map((x) => [x.message_id!, x])),
-        );
-      })
-      .catch((e: unknown) => !cancelled && setLoadError(describeError(e)));
-    return () => {
-      cancelled = true;
-    };
-  }, [sessionId]);
-
-  useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages.length, pending]);
-
-  const send = useCallback(
-    async (intent: "chat" | "exercise", text: string): Promise<boolean> => {
-      setError(null);
-      setPending(
-        intent === "exercise"
-          ? `${mentor.firstName} is preparing and checking an exercise…`
-          : `${mentor.firstName} is thinking and double-checking the answer…`,
-      );
-      try {
-        const res = await api.chat({
-          mentorId: mentor.id,
-          sessionId: sessionId ?? undefined,
-          content: text,
-          intent,
-          language: tutorLanguage,
-          documentId: document?.id,
-        });
-        const sid = res.session.id;
-        if (sid !== sessionId) {
-          skipLoad.current = sid;
-          setParams({ session: sid }, { replace: true });
-        }
-        setLoaded((cur) => ({
-          sid,
-          messages: [...(cur.sid === sid ? cur.messages : []), ...res.messages],
-        }));
-        if (res.exercise?.message_id) {
-          const ex = res.exercise;
-          setExercises((prev) => ({ ...prev, [ex.message_id!]: ex }));
-        }
-        void reloadSessions();
-        return true;
-      } catch (e) {
-        setError({
-          message: describeError(e),
-          retry: intent === "exercise" ? () => retryExercise.current() : undefined,
-        });
-        return false;
-      } finally {
-        setPending(null);
-      }
-    },
-    [mentor, sessionId, tutorLanguage, document, setParams, reloadSessions],
-  );
-
-  useEffect(() => {
-    retryExercise.current = () => void send("exercise", EXERCISE_REQUEST);
-  }, [send]);
-
-  // dashboard deep-link: /learn/:id?exercise=1
-  useEffect(() => {
-    if (wantsExercise && !autoExerciseDone.current) {
-      autoExerciseDone.current = true;
-      void send("exercise", EXERCISE_REQUEST);
-    }
-  }, [wantsExercise, send]);
-
-  async function attach(file: File) {
-    setDocumentBusy(true);
-    setError(null);
-    try {
-      const { document: doc } = await uploadDocument(file, user.id);
-      setDocument(doc);
-    } catch (e) {
-      setError({ message: describeError(e) });
-    } finally {
-      setDocumentBusy(false);
-    }
-  }
+  const groups: ExperienceGroup[] = ["understand", "practise", "prove"];
 
   return (
-    <div
-      style={mentorStyle(mentor)}
-      className="grid min-h-0 flex-1 grid-rows-1 lg:grid-cols-[320px_1fr]"
-      data-testid="learning-space"
-    >
-      <div className="hidden min-h-0 lg:flex lg:flex-col">
-        <MentorSidebar
-          mentor={mentor}
-          sessions={sessions}
-          activeSessionId={sessionId}
-          onNewSession={() => {
-            setParams({});
-            setDocument(null);
-            setError(null);
-          }}
-        />
-      </div>
-
-      <section className="flex min-h-0 flex-col" aria-label={`Conversation with ${mentor.name}`}>
-        <div className="flex flex-wrap items-center gap-3 border-b border-ink/10 bg-paper/80 px-4 py-3 backdrop-blur sm:px-6">
-          <div className="lg:hidden">
-            <p className="font-display text-xl leading-none">{mentor.name}</p>
-            <p className="text-xs text-slate-deep">{mentor.shortDomain}</p>
-          </div>
-          <div className="flex gap-1 lg:hidden" aria-label="Switch mentor">
-            {MENTORS.filter((m) => m.id !== mentor.id).map((m) => (
-              <Link key={m.id} to={`/learn/${m.id}`} title={`Switch to ${m.firstName}`}>
-                <MentorAvatar mentor={m} size={30} />
-              </Link>
-            ))}
-          </div>
-          <span className="inline-flex items-center gap-1.5 text-xs text-slate-deep">
-            <ShieldCheck className="size-3.5 text-teal-deep" aria-hidden="true" /> Every answer is
-            checked before you see it
-          </span>
-          <label className="ms-auto flex items-center gap-2 text-xs text-slate-deep">
-            Replies in
-            <select
-              value={tutorLanguage}
-              onChange={(e) => setTutorLanguage(e.target.value as Language)}
-              className="h-8 cursor-pointer rounded-full border border-ink/15 bg-paper px-2 text-xs text-ink"
-            >
-              <option value="auto">Same as me</option>
-              <option value="en">English</option>
-              <option value="fr">Français</option>
-              <option value="ar">العربية</option>
-            </select>
-          </label>
+    <div style={mentorStyle(mentor)} className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6" data-testid="learning-space">
+      <section className="grid items-end gap-6 md:grid-cols-[minmax(220px,300px)_1fr]" aria-labelledby="mentor-name">
+        <div className="mx-auto w-56 md:w-full">
+          <MentorCharacter mentor={mentor} state={topicFocused ? "listening" : "idle"} />
         </div>
-
-        <div
-          ref={scrollRef}
-          className={cn("min-h-0 flex-1 overflow-y-auto", `motif-${mentor.motif}`)}
-          data-testid="message-list"
-        >
-          <div className="mx-auto flex max-w-3xl flex-col gap-5 px-4 py-6 sm:px-6">
-            {loadError && (
-              <Alert tone="terracotta">
-                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-terracotta-deep" />
-                <span>{loadError}</span>
-              </Alert>
-            )}
-            {messages.length === 0 && !pending && (
-              <Welcome mentor={mentor} onPick={(s) => void send("chat", s)} />
-            )}
-            {messages.map((m) => (
-              <MessageBubble
-                key={m.id}
-                message={m}
-                mentor={mentor}
-                exercise={exercises[m.id]}
-                onExerciseUpdate={(ex) =>
-                  setExercises((prev) => ({ ...prev, [ex.message_id!]: ex }))
-                }
-              />
+        <div className="pb-2">
+          <p className="text-sm font-medium text-[var(--mentor-deep)]">{mentor.domain}</p>
+          <h1 id="mentor-name" className="font-display text-5xl leading-none sm:text-6xl">
+            {mentor.name}
+          </h1>
+          <p className="mt-1 font-ar text-2xl text-[var(--mentor-deep)]" lang="ar" dir="rtl">
+            {mentor.nameAr}
+          </p>
+          <p className="mt-4 max-w-2xl text-lg text-ink/85">
+            {t("space.welcome", { name: mentor.name })} {mentor.tagline}
+          </p>
+          <ul className="mt-4 flex flex-wrap gap-1.5" aria-label={t("a11y.personality")}>
+            {mentor.personality.map((p) => (
+              <li key={p}>
+                <Badge tone="mentor">{p}</Badge>
+              </li>
             ))}
-            {pending && <TypingIndicator mentor={mentor} stage={pending} />}
-            {error && (
-              <Alert tone="terracotta" data-testid="chat-error">
-                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-terracotta-deep" />
-                <span className="flex-1">{error.message}</span>
-                {error.retry && (
-                  <Button size="sm" variant="outline" onClick={error.retry}>
-                    <RotateCcw /> Retry
-                  </Button>
-                )}
-              </Alert>
-            )}
-          </div>
-        </div>
-
-        <div className="border-t border-ink/10 bg-parchment/90 px-4 py-3 sm:px-6">
-          <div className="mx-auto max-w-3xl">
-            <Composer
-              disabled={!!pending}
-              document={document}
-              documentBusy={documentBusy}
-              onSend={(t) => send("chat", t)}
-              onExercise={() => void send("exercise", EXERCISE_REQUEST)}
-              onAttach={attach}
-              onClearDocument={() => setDocument(null)}
-            />
-          </div>
+          </ul>
+          <details className="mt-4 max-w-2xl rounded-2xl bg-paper/70 p-4 text-sm" data-focus-hide>
+            <summary className="cursor-pointer font-semibold">{t("space.howITeach")}</summary>
+            <p className="mt-2 text-ink/80">{mentor.description}</p>
+            <ul className="mt-2 grid gap-1 sm:grid-cols-2">
+              {mentor.methodology.map((m) => (
+                <li key={m} className="flex gap-2">
+                  <span className="mt-2 size-1.5 shrink-0 rounded-full bg-[var(--mentor)]" /> {m}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 text-slate-deep">
+              {t("space.subjects")}: {mentor.subjects.join(", ")}
+            </p>
+          </details>
         </div>
       </section>
-    </div>
-  );
-}
 
-function Welcome({ mentor, onPick }: { mentor: MentorProfile; onPick: (s: string) => void }) {
-  return (
-    <div className="flex flex-col items-center py-6 text-center" data-testid="welcome">
-      <div className="w-28 lg:hidden">
-        <MentorPortrait mentor={mentor} />
-      </div>
-      <h2 className="mt-2 font-display text-3xl">Welcome to {mentor.firstName}'s study</h2>
-      <p className="mt-2 max-w-md text-sm text-ink/75">{mentor.tagline}</p>
-      <div className="mt-6 grid w-full max-w-xl gap-2">
-        {mentor.starters.map((s) => (
-          <button
-            key={s}
-            type="button"
-            onClick={() => onPick(s)}
-            className="cursor-pointer rounded-xl border border-ink/10 bg-paper px-4 py-3 text-start text-sm shadow-sm transition-colors hover:border-[var(--mentor)] hover:bg-[var(--mentor-soft)]"
-            dir="auto"
-            data-testid="starter"
-          >
-            {s}
-          </button>
+      <Card className="mt-6 p-5 sm:p-6" onFocusCapture={() => setTopicFocused(true)} onBlurCapture={() => setTopicFocused(false)}>
+        <TopicField mentor={mentor} />
+      </Card>
+
+      <div className="mt-8 space-y-8">
+        {groups.map((g) => (
+          <section key={g} aria-labelledby={`group-${g}`}>
+            <h2 id={`group-${g}`} className="font-display text-2xl">
+              {t(GROUP_LABEL[g])}
+            </h2>
+            <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {EXPERIENCES.filter((e) => e.group === g).map((e) => {
+                const Icon = e.icon;
+                return (
+                  <li key={e.id}>
+                    <Link
+                      to={`/learn/${mentor.id}/${e.id}`}
+                      className="group flex h-full items-start gap-3 rounded-2xl border border-ink/10 bg-paper p-4 transition-colors hover:border-[var(--mentor)] hover:bg-[var(--mentor-soft)]"
+                      data-testid={`exp-${e.id}`}
+                    >
+                      <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[var(--mentor-soft)] text-[var(--mentor-deep)] group-hover:bg-paper">
+                        <Icon className="size-5" aria-hidden="true" />
+                      </span>
+                      <span>
+                        <span className="block font-semibold">{t(e.name)}</span>
+                        <span className="mt-0.5 block text-sm text-ink/75">{t(e.desc)}</span>
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
         ))}
+      </div>
+
+      <div className="mt-10 grid gap-6 lg:grid-cols-[1fr_320px]" data-focus-hide>
+        <section aria-labelledby="recent-title">
+          <h2 id="recent-title" className="font-display text-2xl">
+            {t("space.recent", { name: mentor.name })}
+          </h2>
+          {recent === null ? (
+            <p className="mt-3 text-sm text-slate-deep">{t("common.loading")}</p>
+          ) : recent.length === 0 ? (
+            <p className="mt-3 rounded-2xl border border-dashed border-ink/20 p-6 text-center text-sm text-slate-deep">
+              {t("space.noRecent")}
+            </p>
+          ) : (
+            <ul className="mt-3 divide-y divide-ink/10 rounded-2xl border border-ink/10 bg-paper" data-testid="recent-activities">
+              {recent.map((r) => (
+                <li key={r.key}>
+                  <Link to={r.href} className="flex items-center gap-3 px-4 py-3 hover:bg-ink/5">
+                    <Badge tone="mentor">{t(r.kind)}</Badge>
+                    <span className="min-w-0 flex-1 truncate" dir="auto">
+                      {r.label}
+                    </span>
+                    <span className="shrink-0 text-xs text-slate-deep">{formatRelative(r.at)}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+        <section aria-labelledby="others-title">
+          <h2 id="others-title" className="font-display text-2xl">
+            {t("space.switch")}
+          </h2>
+          <ul className="mt-3 space-y-2">
+            {MENTORS.filter((m) => m.id !== mentor.id).map((m) => (
+              <li key={m.id}>
+                <Link
+                  to={`/learn/${m.id}`}
+                  className="flex items-center gap-3 rounded-2xl border border-ink/10 bg-paper p-3 hover:bg-ink/5"
+                  data-testid={`switch-${m.id}`}
+                >
+                  <MentorAvatar mentor={m} size={48} />
+                  <span>
+                    <span className="block font-semibold">{m.name}</span>
+                    <span className="block text-sm text-slate-deep">{L(m).shortDomain}</span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
       </div>
     </div>
   );

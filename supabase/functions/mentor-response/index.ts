@@ -10,6 +10,7 @@ import { buildContext, allowedOrigins } from "../_shared/context.ts";
 import { corsHeaders, errorResponse, HttpError, json, readJson } from "../_shared/http.ts";
 import { handleChat } from "./chat.ts";
 import { handleGrade } from "./grade.ts";
+import { handleCheck, handleGenerate } from "./learn.ts";
 
 const env = (k: string) => Deno.env.get(k);
 
@@ -22,6 +23,8 @@ Deno.serve(async (req: Request) => {
     const ctx = await buildContext(req, env);
     if (body?.action === "chat") return json(await handleChat(ctx, body), 200, cors);
     if (body?.action === "grade") return json(await handleGrade(ctx, body), 200, cors);
+    if (body?.action === "generate") return json(await handleGenerate(ctx, body), 200, cors);
+    if (body?.action === "check") return json(await handleCheck(ctx, body), 200, cors);
     throw new HttpError(400, "BAD_REQUEST", "Unknown action.");
   } catch (e) {
     return errorResponse(e, cors);

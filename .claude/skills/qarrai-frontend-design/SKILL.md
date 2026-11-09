@@ -64,20 +64,22 @@ Never set Arabic in DM Serif (no Arabic glyphs). Never use letter-spacing on Ara
 
 Each mentor is a **theme applied through CSS variables**, never a separate component set. Wrap any mentor-specific surface in `style={mentorStyle(mentor)}` and use `var(--mentor)`, `var(--mentor-deep)` and `var(--mentor-soft)`. Shared across all three: layout grid, component shapes, type scale, motion durations, arch frame, gold medallion.
 
-| | **Shamia Al-Muhasbi** · شامية المحاسبي | **Draa Al-Mughamir** · ذراع المغامر | **Ba9lewa Al Fe9ah** · بقلوة الفقاه |
+| | **Ba9lewa** · بقلوة | **Ibn Batbuta** · ابن بطبوطة | **Falfoul** · فلفول |
 | --- | --- | --- | --- |
 | Domain | Mathematics, Logic, Statistics | Physics, Chemistry, Biology | Arabic, French, English, literature |
 | Personality | Analytical, patient, precise, structured | Curious, energetic, adventurous, creative | Eloquent, witty, precise, appreciative of beauty |
-| Colour (base / deep / soft) | Sage Teal `#4C9C91` / `#2B6159` / `#DDEDEA` | Terracotta `#D77C65` / `#9C4430` / `#F6E0D8` | Antique Gold `#C5A36B` / `#7A5A22` / `#F1E6D0` |
+| Character | Baklava with round glasses, ruler and pencil | Batbout-bread explorer with goggles, red cap, blue scarf | Red gummy-bear scholar with gold glasses, bow tie, scroll |
+| Colour (base / deep / soft) | Antique Gold `#C5A36B` / `#7A5A22` / `#F1E6D0` | Sage Teal `#4C9C91` / `#2B6159` / `#DDEDEA` | Terracotta `#D77C65` / `#9C4430` / `#F6E0D8` |
 | Symbol and motif | `∑` · fine grid, golden spiral (`motif-grid`) | `⚛` · orbits and particles (`motif-orbits`) | `ض` · ruled lines and a calligraphic stroke (`motif-lines`) |
 | Composition | Aligned, symmetrical, numbered steps, tabular figures | Diagonal energy, slight rotation, discovery reveals | Generous margins, editorial rhythm, pull-quotes |
 | Motion character | Calm, linear-precise, short (150–220 ms), no bounce | Lively spring (low bounce), staggered reveals | Graceful ease-out (250–320 ms), text-led fades |
 | UI accents | Step counters, checkmarks on verified maths | "Explorer's challenge" callouts, experiment cards | `~~error~~ → **fix**` corrections, vocabulary chips |
 
-**Character art:** the final designs will be supplied by the team. Until then, `MentorPortrait.tsx` provides parametric SVGs. When the art arrives:
-- Keep **one consistent style** across all three: same line weight, lighting, framing (head and shoulders in the arch) and palette mapping.
-- Ship SVG, or WebP/AVIF at 1×/2×, or Lottie/Rive files (§4). Give every portrait meaningful `alt`/`aria-label`, and decorative copies `aria-hidden`.
-- Keep the arch frame and medallion as the shared container so the mentors read as one family.
+**Character art (final):** four states per mentor (`idle`, `listening`, `thinking`, `talking`) in `src/assets/mentors/<id>_<state>.webp`, produced from the originals in `design/mentors/source/` by `scripts/optimize-mentor-art.mjs` (one union crop per mentor so the states line up).
+- Render with `MentorCharacter` (arch alcove, cross-fade between states, all states preloaded) or `MentorAvatar` (round face crop). Never `<img>` the files directly.
+- Drive the state with `useCharacterState({ pending, typing, speaking })`: typing → listening, waiting for the AI → thinking, answer just arrived or read aloud → talking, otherwise idle. Under reduced motion the change is instant.
+- `alt` is localised (name, character, state). Pass `decorative` when the name is already announced next to it.
+- Mentor display text (domain, tagline, description, topics…) is localised through `useLocalizedMentor` / `useMentorLocalizer` (`src/data/mentorText.ts`); never print `mentor.domain` etc. directly in a component.
 
 Avoid: a mentor becoming a different app (different fonts, radii or layout), stereotypes, or text colours outside the `*-deep` tokens.
 
@@ -117,7 +119,7 @@ Design and implement all of these, not just the happy path:
 | State | Requirement |
 | --- | --- |
 | **Loading** | Skeletons shaped like the content, or the mentor typing indicator. Never a blank screen. Use `aria-busy`/`role="status"`. |
-| **Empty** | Explain what will appear and offer the next action (e.g. "Ask Shamia your first question"). |
+| **Empty** | Explain what will appear and offer the next action (e.g. "Ask Ba9lewa your first question"). |
 | **Error** | Show the server's message: `ApiError.message` is written for students. Use `retryAfterSeconds` for rate limits and offer **Retry** where it makes sense. Keep the student's typed text. |
 | **Success** | Quiet confirmation (toast/inline), with a subtle celebration for solved exercises (reduced-motion safe). |
 | **Disabled** | Visibly disabled, plus *why* (tooltip or helper text). Never disable silently. |

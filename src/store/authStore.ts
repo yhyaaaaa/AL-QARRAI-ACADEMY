@@ -1,8 +1,10 @@
 import { create } from "zustand";
+import type { StringKey } from "@/i18n/strings";
 import type { User } from "@supabase/supabase-js";
 import { supabase, requireSupabase } from "@/services/supabase/client";
 import { data } from "@/services/data";
 import { api } from "@/services/api";
+import { usePrefs, type AccessibilityPrefs } from "@/store/prefsStore";
 import type { AccountType, AgeBand, Profile } from "@/types";
 
 export interface SignUpInput {
@@ -14,7 +16,7 @@ export interface SignUpInput {
   ageBand?: AgeBand;
   guardianConsent?: boolean;
   guardianEmail?: string;
-  preferredLanguage: "auto" | "en" | "fr" | "ar";
+  preferredLanguage: "auto" | "en" | "fr" | "ar" | "tn";
 }
 
 interface AuthState {
@@ -29,23 +31,19 @@ interface AuthState {
   signOut: (scope?: "local" | "global") => Promise<void>;
 }
 
-const FRIENDLY: Record<string, string> = {
-  "Invalid login credentials": "Wrong email or password.",
-  "Email not confirmed": "Please confirm your email first. Check your inbox (or ask a parent to).",
+/** Maps auth/server errors to translation keys (pages translate them with translateMessage). */
+const FRIENDLY: Record<string, StringKey> = {
+  "Invalid login credentials": "auth.err.credentials",
+  "Email not confirmed": "auth.err.unconfirmed",
 };
 
 function friendly(message: string): string {
-  if (message.includes("guardian_consent_required"))
-    return "A parent or guardian must agree before a student under 18 can join.";
-  if (message.includes("invalid_display_name"))
-    return "Please choose a nickname between 2 and 40 characters.";
-  if (message.includes("guardian_email_required"))
-    return "Students under 18 must give a parent or guardian email.";
-  if (message.includes("guardian_email_must_differ"))
-    return "The parent email must be different from the student email.";
-  if (message.includes("invalid_guardian_email")) return "The parent email address is not valid.";
-  if (message.includes("Database error saving new user"))
-    return "Your account could not be created. Check the form and try again.";
+  if (message.includes("guardian_consent_required")) return "val.consentRequired";
+  if (message.includes("invalid_display_name")) return "val.nickLength";
+  if (message.includes("guardian_email_required")) return "val.guardianRequired";
+  if (message.includes("guardian_email_must_differ")) return "val.guardianDifferent";
+  if (message.includes("invalid_guardian_email")) return "val.guardianInvalid";
+  if (message.includes("Database error saving new user")) return "auth.err.createFailed";
   return FRIENDLY[message] ?? message;
 }
 
@@ -100,6 +98,11 @@ export const useAuth = create<AuthState>()((set, get) => ({
     if (!user) return;
     const profile = await data.profile(user.id);
     set({ profile });
+    // adopt the learner's saved language & comfort settings on this device
+    usePrefs.getState().hydrate({
+      language: profile.preferred_language === "auto" ? null : profile.preferred_language,
+      accessibility: profile.accessibility as Partial<AccessibilityPrefs>,
+    });
     // students: (re)send pending guardian invitations; the server enforces cooldowns and limits
     if (profile.account_type === "student" && !invitesSent.has(user.id)) {
       invitesSent.add(user.id);
@@ -152,6 +155,8 @@ export const useAuth = create<AuthState>()((set, get) => ({
 
   async signOut(scope = "local") {
     if (supabase) await supabase.auth.signOut({ scope });
+    // unsaved preferences belong to the account that made them, never to the next one
+    usePrefs.getState().markSynced();
     set({ user: null, profile: null });
   },
 }));

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge, Input } from "@/components/ui/primitives";
 import { MarkdownContent } from "@/components/chat/MarkdownContent";
 import { api } from "@/services/api";
+import { useT } from "@/i18n/strings";
 
 /** Answers are checked on the server; the correct answer is never sent to the browser before completion. */
 export function ExerciseCard({
@@ -14,6 +15,7 @@ export function ExerciseCard({
   exercise: ExerciseView;
   onUpdate: (e: ExerciseView) => void;
 }) {
+  const t = useT();
   const [answer, setAnswer] = useState("");
   const [hintsShown, setHintsShown] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -37,7 +39,7 @@ export function ExerciseCard({
     } catch (err) {
       setMessage({
         tone: "bad",
-        text: err instanceof Error ? err.message : "Could not check your answer.",
+        text: err instanceof Error ? err.message : t("ex.failed"),
       });
     } finally {
       setBusy(false);
@@ -52,15 +54,15 @@ export function ExerciseCard({
       <div className="flex items-center gap-2">
         <PencilLine className="size-4 text-[var(--mentor-deep)]" aria-hidden="true" />
         <span className="text-xs font-semibold uppercase tracking-widest text-[var(--mentor-deep)]">
-          Practice exercise
+          {t("ex.label")}
         </span>
         {done && (
           <Badge tone={exercise.is_correct ? "teal" : "terracotta"} className="ms-auto">
-            {exercise.is_correct ? "Solved" : "Solution shown"}
+            {exercise.is_correct ? t("ex.solved") : t("ex.shown")}
           </Badge>
         )}
         {!done && exercise.attempts > 0 && (
-          <span className="ms-auto text-xs text-slate-deep">Attempt {exercise.attempts}/3</span>
+          <span className="ms-auto text-xs text-slate-deep">{t("ex.attempt", { n: exercise.attempts })}</span>
         )}
       </div>
       <MarkdownContent className="mt-2 font-medium">{exercise.question}</MarkdownContent>
@@ -78,7 +80,7 @@ export function ExerciseCard({
               className="cursor-pointer text-xs font-medium text-[var(--mentor-deep)] hover:underline"
               onClick={() => setHintsShown((n) => n + 1)}
             >
-              Show hint ({hintsShown + 1}/{exercise.hints.length})
+              {t("ex.hint", { n: hintsShown + 1, total: exercise.hints.length })}
             </button>
           )}
         </div>
@@ -90,15 +92,15 @@ export function ExerciseCard({
             value={answer}
             onChange={(e) => setAnswer(e.target.value.slice(0, 500))}
             placeholder={
-              exercise.answer_type === "numeric" ? "Your answer (a number)" : "Your answer"
+              exercise.answer_type === "numeric" ? t("ex.answerNum") : t("ex.answer")
             }
-            aria-label="Your answer"
+            aria-label={t("ex.answer")}
             dir="auto"
             className="bg-paper"
             disabled={busy}
           />
           <Button type="submit" variant="mentor" disabled={!answer.trim() || busy}>
-            {busy ? <Loader2 className="animate-spin" /> : null} Check
+            {busy ? <Loader2 className="animate-spin" /> : null} {t("ex.check")}
           </Button>
         </form>
       )}

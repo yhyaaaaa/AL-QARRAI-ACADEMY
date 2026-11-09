@@ -5,9 +5,11 @@ import { Badge, Card, Input, Label } from "@/components/ui/primitives";
 import { data } from "@/services/data";
 import { api } from "@/services/api";
 import type { GuardianLink } from "@/types";
+import { useT } from "@/i18n/strings";
 
 /** Student view: who can follow my progress, add a guardian, (re)send invitations. */
 export function GuardiansCard() {
+  const t = useT();
   const [links, setLinks] = useState<GuardianLink[] | null>(null);
   const [email, setEmail] = useState("");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -49,43 +51,41 @@ export function GuardiansCard() {
       const r = await api.inviteGuardians();
       setEmail("");
       return r.results.some((x) => x.result === "invited")
-        ? "Added. We emailed them an invitation to the parent dashboard."
-        : "Added. They'll see your progress after signing in to their parent account with that email.";
+        ? t("guard.invited")
+        : t("guard.added");
     });
   }
 
   return (
     <Card className="mt-6 p-6" data-testid="guardians-card">
       <h2 className="flex items-center gap-2 font-display text-2xl">
-        <HeartHandshake className="size-5 text-gold-deep" aria-hidden="true" /> Parents &amp;
-        guardians
+        <HeartHandshake className="size-5 text-gold-deep" aria-hidden="true" /> {t("guard.title")}
       </h2>
       <p className="mt-1 text-sm text-slate-deep">
-        Linked guardians can see your progress, session topics and exercise results, but not your
-        conversations.
+        {t("guard.body")}
       </p>
 
       {links === null ? (
-        <p className="mt-4 text-sm text-slate-deep">Loading…</p>
+        <p className="mt-4 text-sm text-slate-deep">{t("common.loading")}</p>
       ) : links.length === 0 ? (
-        <p className="mt-4 text-sm text-slate-deep">No guardian added.</p>
+        <p className="mt-4 text-sm text-slate-deep">{t("guard.none")}</p>
       ) : (
         <ul className="mt-4 divide-y divide-ink/10">
           {links.map((l) => (
             <li key={l.id} className="flex items-center gap-3 py-2">
               <span className="min-w-0 flex-1 truncate text-sm">{l.guardian_email}</span>
               <Badge tone={l.status === "active" ? "teal" : "gold"}>
-                {l.status === "active" ? "Linked" : "Invitation pending"}
+                {l.status === "active" ? t("guard.linked") : t("guard.pending")}
               </Badge>
               <button
                 type="button"
                 className="cursor-pointer rounded-full p-1 text-slate-deep hover:bg-ink/5"
-                aria-label={`Remove ${l.guardian_email}`}
+                aria-label={t("guard.remove", { email: l.guardian_email })}
                 disabled={busy}
                 onClick={() =>
                   run(async () => {
                     await data.revokeGuardian(l.id);
-                    return "Guardian removed.";
+                    return t("guard.removed");
                   })
                 }
               >
@@ -98,11 +98,11 @@ export function GuardiansCard() {
 
       <form onSubmit={add} className="mt-4 flex flex-wrap items-end gap-2">
         <div className="min-w-56 flex-1">
-          <Label htmlFor="gmail">Add a parent's email</Label>
+          <Label htmlFor="gmail">{t("guard.add")}</Label>
           <Input id="gmail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
         </div>
         <Button type="submit" disabled={busy || !email.trim()}>
-          {busy ? <Loader2 className="animate-spin" /> : <Send />} Add &amp; invite
+          {busy ? <Loader2 className="animate-spin" /> : <Send />} {t("guard.addBtn")}
         </Button>
       </form>
       {msg && (

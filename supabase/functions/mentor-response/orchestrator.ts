@@ -20,7 +20,7 @@ import {
   routeDraftModel,
   type ModelConfig,
 } from "./modelRouter.ts";
-import { buildSystemPrompt, getMentorPrompt, type AgeBand } from "./prompts/index.ts";
+import { buildSystemPrompt, getMentorPrompt, type AgeBand, type LearnerProfile } from "./prompts/index.ts";
 import { extractJsonObject, validateDraft } from "./validator.ts";
 
 export const MAX_HISTORY_TURNS = 12;
@@ -30,6 +30,7 @@ export interface PipelineDeps {
   models: ModelConfig;
   enableClassifier: boolean;
   ageBand?: AgeBand;
+  learner?: LearnerProfile;
   /** random per-request token used to delimit untrusted material */
   boundary?: string;
   now?: () => number;
@@ -53,6 +54,18 @@ interface Draft {
   reviewText: string;
   /** Structural problem detected before validation (e.g. malformed exercise JSON). */
   structuralIssue?: string;
+}
+
+/** Splits the "FOLLOW-UPS:" block from a reply into structured suggestions. */
+export function splitFollowUps(text: string): { content: string; followUps: string[] } {
+  const m = /\n\s*(?:#+\s*)?\**\s*follow[- ]?ups?\s*:?\s*\**\s*\n([\s\S]*)$/i.exec(text);
+  if (!m) return { content: text.trim(), followUps: [] };
+  const followUps = m[1]
+    .split("\n")
+    .map((l) => l.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, "").trim())
+    .filter((l) => l.length > 3 && l.length <= 200)
+    .slice(0, 3);
+  return { content: text.slice(0, m.index).trim(), followUps };
 }
 
 /** Removes revision meta-commentary small models prepend ("Here is the revised response:", "---"). */
@@ -116,8 +129,10 @@ export async function runTutorPipeline(
   const system = buildSystemPrompt(mentor, {
     language: req.language,
     intent: req.intent,
+    mode: req.mode,
     material: req.material,
     ageBand: deps.ageBand,
+    learner: deps.learner,
     boundary: deps.boundary,
   });
   const baseMessages: ProviderMessage[] = [{ role: "system", content: system }, ...history];
@@ -163,8 +178,9 @@ export async function runTutorPipeline(
     validations.push(report);
 
     if (report.decision === "accept") {
+      const split = req.intent === "chat" ? splitFollowUps(draft.content) : { content: draft.content, followUps: [] };
       return {
-        content: draft.content,
+        content: split.content,
         status: "validated",
         exercise: draft.exercise,
         meta: {
@@ -175,6 +191,7 @@ export async function runTutorPipeline(
           attempts: attempt,
           validation: validations,
           latencyMs: now() - started,
+          followUps: split.followUps,
         },
       };
     }
@@ -197,7 +214,8 @@ export async function runTutorPipeline(
   }
 
   // 4. still rejected → safe clarification, never the unvalidated draft
-  const lang = req.language === "auto" ? detectLanguage(lastUser) : req.language;
+  const chosen = req.language === "auto" ? detectLanguage(lastUser) : req.language;
+  const lang = chosen === "tn" ? "ar" : chosen;
   return {
     content: mentor.fallbackMessage[lang],
     status: "fallback",

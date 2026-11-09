@@ -32,16 +32,16 @@ export function routeDraftModel(task: TaskType, models: ModelConfig): string {
 }
 
 export const MENTOR_DEFAULT_TASK: Record<MentorId, TaskType> = {
-  shamia: "math",
-  draa: "science",
-  ba9lewa: "language",
+  ba9lewa: "math",
+  ibnbatbuta: "science",
+  falfoul: "language",
 };
 
 /** Which labels the classifier may choose for each mentor (guards against misrouting). */
 const ALLOWED_TASKS: Record<MentorId, TaskType[]> = {
-  shamia: ["math", "code", "general"],
-  draa: ["science", "math", "code", "general"],
-  ba9lewa: ["language", "writing", "general"],
+  ba9lewa: ["math", "code", "general"],
+  ibnbatbuta: ["science", "math", "code", "general"],
+  falfoul: ["language", "writing", "general"],
 };
 
 const CODE_RE =
@@ -51,8 +51,8 @@ const WRITING_RE =
 
 /** Deterministic, zero-cost classification used as default and as fallback. */
 export function heuristicClassify(text: string, mentorId: MentorId): TaskType {
-  if (mentorId !== "ba9lewa" && CODE_RE.test(text)) return "code";
-  if (mentorId === "ba9lewa" && WRITING_RE.test(text)) return "writing";
+  if (mentorId !== "falfoul" && CODE_RE.test(text)) return "code";
+  if (mentorId === "falfoul" && WRITING_RE.test(text)) return "writing";
   return MENTOR_DEFAULT_TASK[mentorId];
 }
 

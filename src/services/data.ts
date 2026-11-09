@@ -28,7 +28,9 @@ export const data = {
 
   async updateProfile(
     userId: string,
-    patch: Partial<Pick<Profile, "display_name" | "preferred_language">>,
+    patch: Partial<
+      Pick<Profile, "display_name" | "preferred_language" | "level" | "learning_styles" | "goals" | "accessibility" | "onboarded_at">
+    >,
   ) {
     const sb = requireSupabase();
     check(await sb.from("profiles").update(patch).eq("id", userId), "your profile");

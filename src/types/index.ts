@@ -25,9 +25,16 @@ export interface Profile {
   /** null for parent accounts */
   age_band: AgeBand | null;
   guardian_consent_at: string | null;
-  preferred_language: "auto" | "en" | "fr" | "ar";
+  preferred_language: "auto" | "en" | "fr" | "ar" | "tn";
+  level: "beginner" | "intermediate" | "advanced";
+  learning_styles: LearningStyle[];
+  goals: string | null;
+  accessibility: Record<string, unknown>;
+  onboarded_at: string | null;
   created_at: string;
 }
+
+export type LearningStyle = "visual" | "analogies" | "step_by_step" | "practical" | "repetition" | "direct";
 
 export interface ProgressRow {
   subject_id: string;

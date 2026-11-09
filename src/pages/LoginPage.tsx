@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { usePrefs } from "@/store/prefsStore";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { AuthShell } from "@/components/layout/AuthShell";
@@ -7,9 +8,12 @@ import { Alert, Input, Label } from "@/components/ui/primitives";
 import { useAuth } from "@/store/authStore";
 import { validateEmail } from "@/utils/validation";
 import { homeFor } from "@/lib/routes";
+import { translateMessage, useT } from "@/i18n/strings";
 
 export function LoginPage() {
   const signIn = useAuth((s) => s.signIn);
+  const t = useT();
+  const uiLanguage = usePrefs((s) => s.uiLanguage);
   const navigate = useNavigate();
   const location = useLocation();
   const [params] = useSearchParams();
@@ -23,31 +27,31 @@ export function LoginPage() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     const emailError = validateEmail(email);
-    if (emailError) return setError(emailError);
-    if (!password) return setError("Please enter your password.");
+    if (emailError) return setError(t(emailError));
+    if (!password) return setError(t("val.pwEmpty"));
     setBusy(true);
     setError(null);
     try {
       await signIn(email.trim(), password);
       navigate(from ?? homeFor(useAuth.getState().profile?.account_type), { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Sign-in failed.");
+      setError(err instanceof Error ? translateMessage(err.message, uiLanguage) : t("auth.signInFailed"));
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <AuthShell title="Welcome back" subtitle="Sign in to continue your learning journey.">
+    <AuthShell title={t("auth.signInTitle")} subtitle={t("auth.signInSub")}>
       {params.get("confirmed") && (
         <Alert tone="teal" className="mb-4">
           <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-teal-deep" />
-          <span>Your email is confirmed. You can sign in now.</span>
+          <span>{t("auth.confirmedOk")}</span>
         </Alert>
       )}
       <form onSubmit={onSubmit} noValidate className="space-y-4">
         <div>
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">{t("auth.email")}</Label>
           <Input
             id="email"
             type="email"
@@ -57,7 +61,7 @@ export function LoginPage() {
           />
         </div>
         <div>
-          <Label htmlFor="password">Password</Label>
+          <Label htmlFor="password">{t("auth.password")}</Label>
           <Input
             id="password"
             type="password"
@@ -72,13 +76,13 @@ export function LoginPage() {
           </p>
         )}
         <Button type="submit" className="w-full" disabled={busy} data-testid="login-submit">
-          {busy && <Loader2 className="animate-spin" />} Sign in
+          {busy && <Loader2 className="animate-spin" />} {t("auth.signInBtn")}
         </Button>
       </form>
       <p className="mt-6 text-center text-sm text-slate-deep">
-        New to Qarrai?{" "}
+        {t("auth.newHere")}{" "}
         <Link to="/register" className="font-medium text-teal-deep hover:underline">
-          Create an account
+          {t("auth.create")}
         </Link>
       </p>
     </AuthShell>

@@ -19,7 +19,8 @@ export interface Student {
   accountType: "student" | "parent";
   /** null for parent accounts */
   ageBand: "under_13" | "13_15" | "16_17" | "18_plus";
-  preferredLanguage: "auto" | "en" | "fr" | "ar";
+  preferredLanguage: "auto" | "en" | "fr" | "ar" | "tn";
+  learner: { level: "beginner" | "intermediate" | "advanced"; styles: string[]; simplified: boolean };
 }
 
 export interface RequestContext {
@@ -64,7 +65,7 @@ export async function buildContext(
 
   const { data: profile, error: pErr } = await db
     .from("profiles")
-    .select("account_type, age_band, preferred_language")
+    .select("account_type, age_band, preferred_language, level, learning_styles, accessibility")
     .eq("id", data.user.id)
     .single();
   if (pErr || !profile) throw new HttpError(403, "FORBIDDEN", "Your profile is missing.");
@@ -83,6 +84,11 @@ export async function buildContext(
     accountType: profile.account_type,
     ageBand: profile.age_band ?? "18_plus",
     preferredLanguage: profile.preferred_language,
+    learner: {
+      level: profile.level ?? "intermediate",
+      styles: profile.learning_styles ?? [],
+      simplified: Boolean((profile.accessibility as { simplified?: boolean } | null)?.simplified),
+    },
   };
   return {
     student,

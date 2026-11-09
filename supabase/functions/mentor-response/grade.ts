@@ -37,7 +37,7 @@ const toView = (r: ExerciseRow): ExerciseView => {
 async function judgeWithModel(ctx: RequestContext, ex: ExerciseRow, answer: string) {
   const ai = await openAiSession(ctx, "grade");
   const mentor = getMentorPrompt(ex.mentor_id as MentorId);
-  const model = ex.mentor_id === "ba9lewa" ? ctx.ai.models.writing : ctx.ai.models.draft;
+  const model = ex.mentor_id === "falfoul" ? ctx.ai.models.writing : ctx.ai.models.draft;
   try {
     const raw = await ai.provider.complete({
       model,

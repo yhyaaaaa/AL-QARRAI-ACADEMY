@@ -2,9 +2,11 @@ import { useState } from "react";
 import { ChevronDown, HeartHandshake, ShieldAlert, ShieldCheck } from "lucide-react";
 import type { MessageRow } from "@/types";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/strings";
 
 /** Transparent provenance for every mentor reply: verified, unverified fallback, or safety response. */
-export function ValidationBadge({ message }: { message: MessageRow }) {
+export function ValidationBadge({ message, mentorName = "" }: { message: MessageRow; mentorName?: string }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const ai = message.meta?.ai;
   const last = ai?.validation.at(-1);
@@ -15,7 +17,7 @@ export function ValidationBadge({ message }: { message: MessageRow }) {
         className="inline-flex items-center gap-1 rounded-full bg-gold/20 px-2 py-0.5 text-[11px] font-medium text-gold-deep"
         data-testid="badge-safety"
       >
-        <HeartHandshake className="size-3" aria-hidden="true" /> Safety response (no AI was used)
+        <HeartHandshake className="size-3" aria-hidden="true" /> {t("chat.safety")}
       </span>
     );
   }
@@ -40,8 +42,8 @@ export function ValidationBadge({ message }: { message: MessageRow }) {
           <ShieldAlert className="size-3" aria-hidden="true" />
         )}
         {verified
-          ? `Verified by ${last?.validatorModel ?? "validator"}`
-          : "Not verified · clarification requested"}
+          ? t("chat.verified")
+          : t("chat.notVerified", { name: mentorName })}
         <ChevronDown
           className={cn("size-3 transition-transform", open && "rotate-180")}
           aria-hidden="true"

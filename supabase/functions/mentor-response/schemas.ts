@@ -5,11 +5,11 @@
  */
 import { z } from "zod";
 
-export const MENTOR_IDS = ["shamia", "draa", "ba9lewa"] as const;
+export const MENTOR_IDS = ["ba9lewa", "ibnbatbuta", "falfoul"] as const;
 export const MentorIdSchema = z.enum(MENTOR_IDS);
 export type MentorId = z.infer<typeof MentorIdSchema>;
 
-export const LanguageSchema = z.enum(["auto", "en", "fr", "ar"]);
+export const LanguageSchema = z.enum(["auto", "en", "fr", "ar", "tn"]);
 export type Language = z.infer<typeof LanguageSchema>;
 
 export const ChatTurnSchema = z.object({
@@ -28,6 +28,7 @@ export const TutorRequestSchema = z.object({
   action: z.literal("tutor"),
   mentorId: MentorIdSchema,
   intent: z.enum(["chat", "exercise"]).default("chat"),
+  mode: z.enum(["explain", "askwhy"]).default("explain"),
   language: LanguageSchema.default("auto"),
   messages: z.array(ChatTurnSchema).min(1).max(40),
   material: MaterialSchema.optional(),
@@ -77,5 +78,7 @@ export interface TutorResponse {
     attempts: number;
     validation: ValidationReport[];
     latencyMs: number;
+    /** suggested next questions, extracted from the validated reply */
+    followUps?: string[];
   };
 }

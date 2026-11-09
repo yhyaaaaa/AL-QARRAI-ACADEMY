@@ -5,7 +5,7 @@ import { parseValidation, extractJsonObject } from "./validator.ts";
 import { heuristicClassify, routeDraftModel } from "./modelRouter.ts";
 import { TutorRequestSchema, type TutorRequestInput } from "./schemas.ts";
 import type { ChatProvider, CompletionRequest } from "./providers/openaiCompatible.ts";
-import { shamia } from "./prompts/shamia.ts";
+import { ba9lewa } from "./prompts/ba9lewa.ts";
 
 const models = loadAiConfig(() => undefined).models;
 
@@ -26,7 +26,7 @@ function scripted(script: Record<string, string[]>) {
 const req = (over: Partial<TutorRequestInput> = {}) =>
   TutorRequestSchema.parse({
     action: "tutor",
-    mentorId: "shamia",
+    mentorId: "ba9lewa",
     messages: [{ role: "user", content: "What is 7 times 8?" }],
     ...over,
   });
@@ -36,10 +36,10 @@ const REJECT = '{"decision":"reject","issues":["Does not answer the question"],"
 
 describe("model routing", () => {
   it("routes by mentor default and detects code/writing", () => {
-    expect(heuristicClassify("solve 2x=4", "shamia")).toBe("math");
-    expect(heuristicClassify("why is the sky blue", "draa")).toBe("science");
-    expect(heuristicClassify("write a python function for primes", "shamia")).toBe("code");
-    expect(heuristicClassify("Help me write an essay about Camus", "ba9lewa")).toBe("writing");
+    expect(heuristicClassify("solve 2x=4", "ba9lewa")).toBe("math");
+    expect(heuristicClassify("why is the sky blue", "ibnbatbuta")).toBe("science");
+    expect(heuristicClassify("write a python function for primes", "ba9lewa")).toBe("code");
+    expect(heuristicClassify("Help me write an essay about Camus", "falfoul")).toBe("writing");
     expect(routeDraftModel("math", models)).toBe("qwen2.5-3b");
     expect(routeDraftModel("language", models)).toBe("mistral-7b");
     expect(routeDraftModel("code", models)).toBe("qwen2.5-coder-7b");
@@ -72,7 +72,7 @@ describe("runTutorPipeline", () => {
     expect(res.meta.attempts).toBe(1);
     expect(res.meta.validation[0].arithmeticChecked).toBe(1);
     const system = calls[0].messages[0].content as string;
-    expect(system).toContain(shamia.name);
+    expect(system).toContain(ba9lewa.name);
     expect(system).toContain("numbered steps");
   });
 
@@ -97,7 +97,7 @@ describe("runTutorPipeline", () => {
     });
     const res = await runTutorPipeline(req(), { provider, models, enableClassifier: false });
     expect(res.status).toBe("fallback");
-    expect(res.content).toBe(shamia.fallbackMessage.en);
+    expect(res.content).toBe(ba9lewa.fallbackMessage.en);
     expect(res.content).not.toContain("bad draft");
   });
 
@@ -140,7 +140,7 @@ describe("runTutorPipeline", () => {
       "llama3.1-8b": [ACCEPT],
     });
     const res = await runTutorPipeline(
-      req({ mentorId: "ba9lewa", messages: [{ role: "user", content: "Corrige ma lettre" }] }),
+      req({ mentorId: "falfoul", messages: [{ role: "user", content: "Corrige ma lettre" }] }),
       { provider, models, enableClassifier: true },
     );
     expect(res.meta.task).toBe("writing");
@@ -164,5 +164,16 @@ describe("stripMetaPreamble (regression: real qwen2.5-3b output)", () => {
     expect(stripMetaPreamble("Sure, let's solve it.\nStep 1")).toBe(
       "Sure, let's solve it.\nStep 1",
     );
+  });
+});
+
+describe("splitFollowUps", () => {
+  it("extracts follow-up questions into structured suggestions", async () => {
+    const { splitFollowUps } = await import("./orchestrator.ts");
+    const r = splitFollowUps("The sky looks blue because…\n\nFOLLOW-UPS:\n- Why are sunsets red?\n- What is a wavelength?\n- Is the sky blue on Mars?");
+    expect(r.content).toBe("The sky looks blue because…");
+    expect(r.followUps).toEqual(["Why are sunsets red?", "What is a wavelength?", "Is the sky blue on Mars?"]);
+    expect(splitFollowUps("Plain answer").followUps).toEqual([]);
+    expect(splitFollowUps("Answer\n**Follow-ups:**\n1. One?\n2. Two?").followUps).toEqual(["One?", "Two?"]);
   });
 });

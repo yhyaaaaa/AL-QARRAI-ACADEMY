@@ -19,6 +19,7 @@ export const ChatRequestSchema = z.object({
   sessionId: z.string().uuid().optional(),
   content: z.string().trim().min(1).max(MAX_STUDENT_MESSAGE),
   intent: z.enum(["chat", "exercise"]).default("chat"),
+  mode: z.enum(["explain", "askwhy"]).default("explain"),
   language: LanguageSchema.default("auto"),
   documentId: z.string().uuid().optional(),
 });

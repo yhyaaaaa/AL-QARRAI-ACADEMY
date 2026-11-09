@@ -36,6 +36,7 @@ export const router = createBrowserRouter([
         element: <AppLayout />,
         children: [
           { path: "/account", element: page(() => import("@/pages/AccountPage"), "AccountPage") },
+          { path: "/settings", element: page(() => import("@/pages/SettingsPage"), "SettingsPage") },
           {
             element: <RequireAuth role="student" />,
             children: [
@@ -50,6 +51,14 @@ export const router = createBrowserRouter([
               {
                 path: "/learn/:mentorId",
                 element: page(() => import("@/pages/LearningPage"), "LearningPage"),
+              },
+              {
+                path: "/learn/:mentorId/:experienceId",
+                element: page(() => import("@/pages/LearningPage"), "ModulePage"),
+              },
+              {
+                path: "/onboarding",
+                element: page(() => import("@/pages/OnboardingPage"), "OnboardingPage"),
               },
               {
                 path: "/progress",

@@ -1,13 +1,19 @@
-export function formatRelative(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const min = Math.round(diff / 60000);
-  if (min < 1) return "just now";
-  if (min < 60) return `${min} min ago`;
-  const h = Math.round(min / 60);
-  if (h < 24) return `${h} h ago`;
-  const d = Math.round(h / 24);
-  if (d < 7) return `${d} day${d > 1 ? "s" : ""} ago`;
-  return new Date(iso).toLocaleDateString();
+/** Relative time in the interface language (read from <html lang>, set by PrefsEffects). */
+export function formatRelative(iso: string, locale?: string): string {
+  const lang = locale ?? (typeof document !== "undefined" ? document.documentElement.lang : "") ?? "";
+  const diffSec = (new Date(iso).getTime() - Date.now()) / 1000;
+  const abs = Math.abs(diffSec);
+  let rtf: Intl.RelativeTimeFormat;
+  try {
+    rtf = new Intl.RelativeTimeFormat(lang || undefined, { numeric: "auto" });
+  } catch {
+    rtf = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
+  }
+  if (abs < 60) return rtf.format(0, "second");
+  if (abs < 3600) return rtf.format(Math.round(diffSec / 60), "minute");
+  if (abs < 86400) return rtf.format(Math.round(diffSec / 3600), "hour");
+  if (abs < 7 * 86400) return rtf.format(Math.round(diffSec / 86400), "day");
+  return new Date(iso).toLocaleDateString(lang || undefined);
 }
 
 export function formatBytes(n: number): string {

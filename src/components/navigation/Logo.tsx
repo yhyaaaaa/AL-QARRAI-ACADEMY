@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/strings";
 
 export function LogoMark({ className }: { className?: string }) {
   return (
@@ -12,11 +13,13 @@ export function LogoMark({ className }: { className?: string }) {
   );
 }
 
-export function Logo({ to = "/", light = false }: { to?: string; light?: boolean }) {
+/** `compact` hides the wordmark on phones (the mark and the accessible name stay). */
+export function Logo({ to = "/", light = false, compact = false }: { to?: string; light?: boolean; compact?: boolean }) {
+  const t = useT();
   return (
-    <Link to={to} className="flex items-center gap-2.5" aria-label="Qarrai Academy home">
+    <Link to={to} className="flex items-center gap-2.5" aria-label={t("a11y.home")}>
       <LogoMark />
-      <span className="leading-none">
+      <span className={cn("leading-none", compact && "hidden sm:inline")}>
         <span className={cn("block font-display text-xl", light ? "text-parchment" : "text-ink")}>
           Qarrai
         </span>

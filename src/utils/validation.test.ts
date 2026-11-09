@@ -31,12 +31,12 @@ describe("registration validation", () => {
     expect(
       validateRegistration({ ...ok, ageBand: "13_15", consent: true, guardianEmail: ok.email })
         .guardianEmail,
-    ).toMatch(/different/);
+    ).toBe("val.guardianDifferent");
   });
 
   it("enforces the same password policy as the server", () => {
-    expect(validatePassword("short1A")).toMatch(/10/);
-    expect(validatePassword("alllowercase123")).toMatch(/upper/);
+    expect(validatePassword("short1A")).toBe("val.pwLength");
+    expect(validatePassword("alllowercase123")).toBe("val.pwMix");
     expect(validatePassword("GoodPassword1")).toBeNull();
   });
 

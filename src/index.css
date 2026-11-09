@@ -186,3 +186,95 @@
     transition-duration: 0ms !important;
   }
 }
+
+/* ───────── Accessibility settings (set on <html> by applyAccessibility) ───────── */
+
+/* text size: rem-based layout scales everything consistently */
+html[data-text-size="lg"] {
+  font-size: 112.5%;
+}
+html[data-text-size="xl"] {
+  font-size: 125%;
+}
+
+/* wider spacing (WCAG 1.4.12 text-spacing values) */
+html[data-spacing="wide"] body {
+  letter-spacing: 0.12em;
+  word-spacing: 0.16em;
+  line-height: 1.8;
+}
+html[data-spacing="wide"] p,
+html[data-spacing="wide"] li {
+  margin-bottom: 0.5em;
+}
+html[data-spacing="wide"][lang^="ar"] body {
+  letter-spacing: 0; /* letter-spacing breaks Arabic joining */
+}
+
+/* high contrast: darker text tokens, stronger borders, no faint text */
+html[data-contrast="high"] {
+  --color-parchment: #fffaf0;
+  --color-paper: #ffffff;
+  --color-slate-deep: #1f2a37;
+  --color-teal-deep: #164a43;
+  --color-gold-deep: #4f3a12;
+  --color-terracotta-deep: #6f2a1a;
+}
+html[data-contrast="high"] body {
+  color: #000;
+}
+html[data-contrast="high"] :where(.border, [class*="border-"]) {
+  border-color: #142337 !important;
+}
+html[data-contrast="high"] :focus-visible {
+  outline: 3px solid #000;
+  outline-offset: 3px;
+}
+
+/* reduced motion chosen in settings (system preference handled above) */
+html[data-motion="reduced"] *,
+html[data-motion="reduced"] *::before,
+html[data-motion="reduced"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* focus mode: hide secondary panels; one activity at a time */
+html[data-focus="on"] [data-focus-hide] {
+  display: none !important;
+}
+
+/* skip link */
+.skip-link {
+  position: absolute;
+  inset-inline-start: 1rem;
+  top: -4rem;
+  z-index: 100;
+  border-radius: 9999px;
+  background: var(--color-ink);
+  color: var(--color-parchment);
+  padding: 0.5rem 1rem;
+}
+.skip-link:focus {
+  top: 0.75rem;
+}
+
+/* flashcard flip */
+.flip-card {
+  perspective: 1200px;
+}
+.flip-card-inner {
+  transition: transform 0.45s cubic-bezier(0.2, 0.7, 0.2, 1);
+  transform-style: preserve-3d;
+}
+.flip-card[data-flipped="true"] .flip-card-inner {
+  transform: rotateY(180deg);
+}
+.flip-face {
+  backface-visibility: hidden;
+}
+.flip-face-back {
+  transform: rotateY(180deg);
+}

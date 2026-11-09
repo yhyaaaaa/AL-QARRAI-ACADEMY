@@ -24,29 +24,29 @@ create policy "materials: delete own" on storage.objects
 
 -- ── Reference data ─────────────────────────────────────────────────────────
 insert into public.mentors (id, name, name_ar, domain, color, description) values
-  ('shamia',  'Shamia Al-Muhasbi', 'شامية المحاسبي', 'Mathematics, Logic and Statistics', '#4C9C91',
+  ('ba9lewa',  'Ba9lewa', 'بقلوة', 'Mathematics, Logic and Statistics', '#C5A36B',
    'Analytical, patient and precise. Teaches through step-by-step reasoning and pattern recognition.'),
-  ('draa',    'Draa Al-Mughamir',  'ذراع المغامر',   'Natural Sciences',                   '#D77C65',
+  ('ibnbatbuta',    'Ibn Batbuta',  'ابن بطبوطة',   'Natural Sciences',                   '#4C9C91',
    'Curious and energetic. Teaches physics, chemistry and biology through discovery and real-world examples.'),
-  ('ba9lewa', 'Ba9lewa Al Fe9ah',  'بقلوة الفقاه',   'Linguistics and Languages',          '#C5A36B',
+  ('falfoul', 'Falfoul',  'فلفول',   'Linguistics and Languages',          '#D77C65',
    'Eloquent and witty. Teaches Arabic, French and English, from grammar to literature.')
 on conflict (id) do update set
   name = excluded.name, name_ar = excluded.name_ar, domain = excluded.domain,
   color = excluded.color, description = excluded.description;
 
 insert into public.subjects (id, name, mentor_id, parent_id) values
-  ('mathematics', 'Mathematics, Logic & Statistics', 'shamia', null),
-  ('algebra', 'Algebra', 'shamia', 'mathematics'),
-  ('geometry', 'Geometry', 'shamia', 'mathematics'),
-  ('statistics', 'Probability & Statistics', 'shamia', 'mathematics'),
-  ('logic', 'Logic', 'shamia', 'mathematics'),
-  ('natural-sciences', 'Natural Sciences', 'draa', null),
-  ('physics', 'Physics', 'draa', 'natural-sciences'),
-  ('chemistry', 'Chemistry', 'draa', 'natural-sciences'),
-  ('biology', 'Biology', 'draa', 'natural-sciences'),
-  ('languages', 'Linguistics & Languages', 'ba9lewa', null),
-  ('arabic', 'Arabic', 'ba9lewa', 'languages'),
-  ('french', 'French', 'ba9lewa', 'languages'),
-  ('english', 'English', 'ba9lewa', 'languages'),
-  ('literature', 'Literature & Rhetoric', 'ba9lewa', 'languages')
+  ('mathematics', 'Mathematics, Logic & Statistics', 'ba9lewa', null),
+  ('algebra', 'Algebra', 'ba9lewa', 'mathematics'),
+  ('geometry', 'Geometry', 'ba9lewa', 'mathematics'),
+  ('statistics', 'Probability & Statistics', 'ba9lewa', 'mathematics'),
+  ('logic', 'Logic', 'ba9lewa', 'mathematics'),
+  ('natural-sciences', 'Natural Sciences', 'ibnbatbuta', null),
+  ('physics', 'Physics', 'ibnbatbuta', 'natural-sciences'),
+  ('chemistry', 'Chemistry', 'ibnbatbuta', 'natural-sciences'),
+  ('biology', 'Biology', 'ibnbatbuta', 'natural-sciences'),
+  ('languages', 'Linguistics & Languages', 'falfoul', null),
+  ('arabic', 'Arabic', 'falfoul', 'languages'),
+  ('french', 'French', 'falfoul', 'languages'),
+  ('english', 'English', 'falfoul', 'languages'),
+  ('literature', 'Literature & Rhetoric', 'falfoul', 'languages')
 on conflict (id) do nothing;

@@ -5,6 +5,8 @@ import { MentorAvatar } from "@/components/mentors/MentorPortrait";
 import { ExerciseCard } from "@/components/exercises/ExerciseCard";
 import { MarkdownContent } from "./MarkdownContent";
 import { ValidationBadge } from "./ValidationBadge";
+import { ReadAloudButton } from "@/features/learning/ui";
+import { useT } from "@/i18n/strings";
 import { cn } from "@/lib/utils";
 
 export function MessageBubble({
@@ -18,6 +20,7 @@ export function MessageBubble({
   exercise?: ExerciseView;
   onExerciseUpdate: (e: ExerciseView) => void;
 }) {
+  const t = useT();
   if (message.role === "user") {
     return (
       <div className="flex flex-col items-end gap-1" data-testid="msg-user">
@@ -37,7 +40,7 @@ export function MessageBubble({
             data-testid="redacted-note"
           >
             <ShieldCheck className="size-3 text-teal-deep" aria-hidden="true" />
-            Personal details (email/phone) were removed to keep you safe.
+            {t("chat.redacted")}
           </p>
         )}
       </div>
@@ -55,14 +58,17 @@ export function MessageBubble({
           !message.status || message.status === "validated" ? "border-ink/10" : "",
         )}
       >
-        <p className="mb-1 text-xs font-semibold text-[var(--mentor-deep)]">{mentor.firstName}</p>
+        <p className="mb-1 text-xs font-semibold text-[var(--mentor-deep)]">{mentor.name}</p>
         {exercise ? (
           <ExerciseCard exercise={exercise} onUpdate={onExerciseUpdate} />
         ) : (
           <MarkdownContent>{message.content}</MarkdownContent>
         )}
         <div className="mt-2">
-          <ValidationBadge message={message} />
+          <div className="flex flex-wrap items-center gap-2">
+            <ValidationBadge message={message} mentorName={mentor.name} />
+            {!exercise && <ReadAloudButton id={message.id} text={message.content} className="-my-1" />}
+          </div>
         </div>
       </div>
     </div>

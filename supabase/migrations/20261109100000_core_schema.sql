@@ -50,7 +50,7 @@ create table public.profiles (
   age_band text check (age_band in ('under_13', '13_15', '16_17', '18_plus')),
   -- when a parent/guardian consent was declared at sign-up (required for every minor)
   guardian_consent_at timestamptz,
-  preferred_language text not null default 'auto' check (preferred_language in ('auto', 'en', 'fr', 'ar')),
+  preferred_language text not null default 'auto' check (preferred_language in ('auto', 'en', 'fr', 'ar', 'tn')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint age_band_matches_type check ((account_type = 'student') = (age_band is not null)),

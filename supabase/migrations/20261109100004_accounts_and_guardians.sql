@@ -55,7 +55,7 @@ declare
   band text := coalesce(meta ->> 'age_band', '');
   consent boolean := coalesce((meta ->> 'guardian_consent')::boolean, false);
   g_email text := nullif(lower(btrim(coalesce(meta ->> 'guardian_email', ''))), '');
-  lang text := case when meta ->> 'preferred_language' in ('auto', 'en', 'fr', 'ar') then meta ->> 'preferred_language' else 'auto' end;
+  lang text := case when meta ->> 'preferred_language' in ('auto', 'en', 'fr', 'ar', 'tn') then meta ->> 'preferred_language' else 'auto' end;
 begin
   if kind not in ('student', 'parent') then
     raise exception 'invalid_account_type' using errcode = '22023';

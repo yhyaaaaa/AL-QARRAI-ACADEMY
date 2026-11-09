@@ -4,6 +4,7 @@ import { MENTOR_BY_ID } from "@/data/mentors";
 import { MentorAvatar } from "@/components/mentors/MentorPortrait";
 import { formatRelative } from "@/utils/format";
 import type { SessionSummary } from "@/types";
+import { useT } from "@/i18n/strings";
 
 export function RecentSessions({
   sessions,
@@ -12,10 +13,11 @@ export function RecentSessions({
   sessions: SessionSummary[];
   limit?: number;
 }) {
+  const t = useT();
   if (sessions.length === 0) {
     return (
       <p className="rounded-xl border border-dashed border-ink/20 p-6 text-center text-sm text-slate-deep">
-        No sessions yet. Pick a mentor to start your first one.
+        {t("sess.none")}
       </p>
     );
   }
@@ -26,7 +28,7 @@ export function RecentSessions({
         return (
           <li key={s.id}>
             <Link
-              to={`/learn/${s.mentor_id}?session=${s.id}`}
+              to={`/learn/${s.mentor_id}/chat?session=${s.id}`}
               className="flex items-center gap-3 rounded-xl px-2 py-3 transition-colors hover:bg-ink/5"
             >
               <MentorAvatar mentor={m} size={38} />
@@ -35,7 +37,7 @@ export function RecentSessions({
                   {s.title}
                 </p>
                 <p className="text-xs text-slate-deep">
-                  {m.firstName} · {formatRelative(s.updated_at)}
+                  {m.name} · {formatRelative(s.updated_at)}
                 </p>
               </div>
               <span className="flex items-center gap-1 text-xs text-slate-deep">

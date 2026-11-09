@@ -69,6 +69,7 @@
     "globals": "^17.14.0",
     "jsdom": "^31.0.0",
     "prettier": "^3.9.10",
+    "sharp": "^0.35.5",
     "supabase": "^3.1.0",
     "tailwindcss": "^4.3.5",
     "typescript": "^6.0.3",

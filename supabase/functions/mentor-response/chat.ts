@@ -40,7 +40,8 @@ export async function handleChat(ctx: RequestContext, raw: unknown): Promise<Cha
   const { db, student } = ctx;
   const mentor = getMentorPrompt(req.mentorId);
   const language = req.language === "auto" ? student.preferredLanguage : req.language;
-  const replyLang = language === "auto" ? detectLanguage(req.content) : language;
+  const chosenLang = language === "auto" ? detectLanguage(req.content) : language;
+  const replyLang = chosenLang === "tn" ? "ar" : chosenLang;
 
   // ── 1. existing session must belong to the student and to this mentor ──
   let session: SessionRow | null = null;
@@ -177,6 +178,7 @@ export async function handleChat(ctx: RequestContext, raw: unknown): Promise<Cha
         action: "tutor",
         mentorId: req.mentorId,
         intent: req.intent,
+        mode: req.mode,
         language,
         messages: [...history, { role: "user", content: redaction.text }].map((m) => ({
           role: m.role,
@@ -189,6 +191,7 @@ export async function handleChat(ctx: RequestContext, raw: unknown): Promise<Cha
         models: ctx.ai.models,
         enableClassifier: ctx.ai.enableClassifier,
         ageBand: student.ageBand,
+        learner: student.learner,
         boundary: randomToken(),
       },
     );
