@@ -1,0 +1,9 @@
+dist
+node_modules
+package-lock.json
+playwright-report
+test-results
+.claude
+supabase/.temp
+supabase/.branches
+deploy

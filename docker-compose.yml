@@ -1,0 +1,24 @@
+# Runs the production web container. The backend (Postgres, Auth, Storage, Edge Functions)
+# is Supabase: `npx supabase start` locally, or a hosted Supabase project in production.
+#
+#   docker compose --env-file .env up --build
+services:
+  web:
+    build:
+      context: .
+      args:
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:?set VITE_SUPABASE_URL in .env}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY:?set VITE_SUPABASE_ANON_KEY in .env}
+    environment:
+      SUPABASE_URL: ${VITE_SUPABASE_URL}
+    ports:
+      - "8080:8080"
+    read_only: true
+    tmpfs:
+      # writable scratch space for the unprivileged nginx user (uid 101) on a read-only root filesystem
+      - /tmp:uid=101,gid=101
+      - /var/cache/nginx:uid=101,gid=101
+      - /etc/nginx/conf.d:uid=101,gid=101
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped

@@ -1,0 +1,188 @@
+@import "tailwindcss";
+
+/* ───────── THE MODERN HOUSE OF KNOWLEDGE — design tokens ───────── */
+@theme {
+  /* Core palette */
+  --color-ink: #142337;
+  --color-ink-soft: #2a3a50;
+  --color-parchment: #f4ebdd;
+  --color-parchment-deep: #eadcc6;
+  --color-paper: #fbf7f0;
+  --color-gold: #c5a36b;
+  --color-gold-deep: #7a5a22; /* text-safe gold (≥ 4.5:1 on parchment) */
+  --color-teal: #4c9c91;
+  --color-teal-deep: #2b6159;
+  --color-terracotta: #d77c65;
+  --color-terracotta-deep: #9c4430;
+  --color-slate: #8294a8;
+  --color-slate-deep: #4a5b6e; /* text-safe slate */
+
+  /* Typography */
+  --font-display: "DM Serif Display", "IBM Plex Sans Arabic", Georgia, serif;
+  --font-sans: "Inter", "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif;
+  --font-arabic: "IBM Plex Sans Arabic", "Inter", sans-serif;
+
+  --radius-arch: 999px 999px 1.25rem 1.25rem;
+  --shadow-card: 0 1px 2px rgb(20 35 55 / 0.06), 0 8px 24px -12px rgb(20 35 55 / 0.18);
+}
+
+@layer base {
+  html {
+    background: var(--color-parchment);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  html[lang="ar"] body {
+    font-family: var(--font-arabic);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-teal-deep);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--color-gold) 45%, transparent);
+  }
+}
+
+@layer components {
+  /* Arabic runs inside mixed content */
+  [lang="ar"],
+  .font-ar {
+    font-family: var(--font-arabic);
+  }
+
+  /* subtle paper grain */
+  .bg-paper-grain {
+    background-color: var(--color-parchment);
+    background-image: radial-gradient(rgb(20 35 55 / 0.035) 1px, transparent 1px);
+    background-size: 18px 18px;
+  }
+
+  /* mentor learning-space motifs */
+  .motif-grid {
+    background-image:
+      linear-gradient(color-mix(in srgb, var(--mentor) 12%, transparent) 1px, transparent 1px),
+      linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--mentor) 12%, transparent) 1px,
+        transparent 1px
+      );
+    background-size: 28px 28px;
+  }
+  .motif-orbits {
+    background-image:
+      radial-gradient(
+        circle at 20% 30%,
+        transparent 58px,
+        color-mix(in srgb, var(--mentor) 14%, transparent) 59px,
+        transparent 60px
+      ),
+      radial-gradient(
+        circle at 80% 70%,
+        transparent 88px,
+        color-mix(in srgb, var(--mentor) 12%, transparent) 89px,
+        transparent 90px
+      ),
+      radial-gradient(color-mix(in srgb, var(--mentor) 18%, transparent) 1.5px, transparent 1.5px);
+    background-size:
+      360px 360px,
+      420px 420px,
+      32px 32px;
+  }
+  .motif-lines {
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 31px,
+      color-mix(in srgb, var(--mentor) 16%, transparent) 31px,
+      color-mix(in srgb, var(--mentor) 16%, transparent) 32px
+    );
+  }
+
+  /* Markdown content inside messages */
+  .prose-qarrai {
+    line-height: 1.65;
+    overflow-wrap: anywhere;
+  }
+  .prose-qarrai > * + * {
+    margin-top: 0.6em;
+  }
+  .prose-qarrai ul {
+    list-style: disc;
+    padding-inline-start: 1.25rem;
+  }
+  .prose-qarrai ol {
+    list-style: decimal;
+    padding-inline-start: 1.25rem;
+  }
+  .prose-qarrai li + li {
+    margin-top: 0.25em;
+  }
+  .prose-qarrai strong {
+    font-weight: 600;
+    color: var(--color-ink);
+  }
+  .prose-qarrai del {
+    color: var(--color-terracotta-deep);
+  }
+  .prose-qarrai code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.88em;
+    background: rgb(20 35 55 / 0.06);
+    padding: 0.1em 0.35em;
+    border-radius: 0.3rem;
+  }
+  .prose-qarrai pre {
+    background: var(--color-ink);
+    color: var(--color-parchment);
+    padding: 0.85rem 1rem;
+    border-radius: 0.75rem;
+    overflow-x: auto;
+  }
+  .prose-qarrai pre code {
+    background: transparent;
+    padding: 0;
+    color: inherit;
+  }
+  .prose-qarrai h1,
+  .prose-qarrai h2,
+  .prose-qarrai h3 {
+    font-family: var(--font-display);
+    font-size: 1.15em;
+  }
+  .prose-qarrai a {
+    color: var(--color-teal-deep);
+    text-decoration: underline;
+  }
+  .prose-qarrai blockquote {
+    border-inline-start: 3px solid var(--mentor, var(--color-gold));
+    padding-inline-start: 0.75rem;
+    color: var(--color-slate-deep);
+  }
+}
+
+@keyframes qarrai-pulse {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+.typing-dot {
+  animation: qarrai-pulse 1.2s infinite ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .typing-dot {
+    animation: none;
+  }
+  * {
+    transition-duration: 0ms !important;
+  }
+}
