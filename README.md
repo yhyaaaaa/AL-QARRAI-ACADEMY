@@ -76,7 +76,7 @@ Open http://localhost:5173.
 
 ## Demo accounts
 
-`scripts/demo-accounts.json` lists a linked demo pair: student **Mohamed Sehly** and parent **Yahya Ben Mohamed**. Create them on your **local** stack, then sign in at http://localhost:5173/login:
+`scripts/demo-accounts.json` lists a linked demo pair: student **Nour** and parent **Parent Demo** (fictional names; the product stores nicknames only). Create them on your **local** stack, then sign in at http://localhost:5173/login:
 
 ```bash
 eval "$(npx supabase status -o env | grep -E '^(ANON_KEY|SERVICE_ROLE_KEY)=')" && ANON_KEY=$ANON_KEY SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY node scripts/create-demo-accounts.mjs
